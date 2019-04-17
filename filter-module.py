@@ -1,15 +1,9 @@
-
-#bw.stat
-#length/steps
-#-----should be remove at the end----------
-
 #!/usr/bin/env python
 valid=0
 read_window_size=50
 #------------code starts from here -----------
-import pyBigWig, scipy.signal, sys, time, argparse, re, os
+import pyBigWig, scipy.signal, sys, argparse, re, os
 from pathlib import Path
-import pandas as pd
 import numpy as np
 from pybedtools import BedTool
 import pybedtools as bt
@@ -147,19 +141,12 @@ elif valid==2:
             os.remove('names.txt')
             del (sites)
             with open('temp.bed')as d_intline:
-                sys.stdout.write( 'Program is running, please wait..' )
                 for line in d_intline:
                         L = line.strip().split()
                         d_openvalue = eval('d_open.values("%s", %s, %s, numpy=True)[::d_step]' % (L[0],L[1],L[2]))
                         d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
                         d_output.addEntries(str(L[0]), int(L[1]), values=d_convolve, span=50, step=d_step)
                         #--------------output processings---------------------
-                        _timer=int(time.time())/8
-                        if int(_timer)*8==int(time.time()):
-                            sys.stdout.write( '.' )
-                            sys.stdout.flush()
-                            time.sleep(1.0)
-                        #--------------running message---------------------
                 print('\n')
                 os.remove('temp.bed')
                 d_output.close()
@@ -173,7 +160,3 @@ elif valid==2:
 else:
     print('Please define the region of interest via specific region (e.g. -r chr7:1:100000), or introduce a BED file (e.g. -l File.bed).')
     exit()
-
-
-
-#----
