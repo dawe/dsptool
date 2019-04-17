@@ -158,5 +158,9 @@ elif valid==2:
         exit()
 #-------------- interval refinement ------------
 else:
-    print('Please define the region of interest via specific region (e.g. -r chr7:1:100000), or introduce a BED file (e.g. -l File.bed).')
-    exit()
+    for line in templist:
+        d_openvalue = d_open.values(line, 1, d_open.chroms(line), numpy=True)[::d_step]
+        d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
+        print("- analyzing chromosome "+line+" from begining to "+str(d_open.chroms(line)))
+        d_output.addEntries(line, 1, ends= d_open.chroms(line), values=d_convolve, span=50, step=d_step)
+#-------------- entire chromosome ------------
