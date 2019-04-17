@@ -122,7 +122,6 @@ if valid==1:
         if (int(d_open.chroms(d_regname)) >= int(d_rege)) :
             d_openvalue = eval('d_open.values("%s", %s, %s, numpy=True)[::d_step]' % (d_regname,d_regs,d_rege))
             d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
-            #d_output.addEntries(d_regname, int(d_regs), values=d_convolve, span=50, step=d_step)
             d_output.addEntries(d_regname, int(d_regs), ends=int(d_rege), values=d_convolve, span=50, step=d_step)
             d_output.close()
         else:
@@ -137,7 +136,7 @@ elif valid==2:
     if d_filter!='hanning':
         bed_file = Path(d_interval)
         if bed_file.is_file():
-            sites = bt.BedTool(d_interval).sort(g = 'names.txt').merge(d=d_step-1, c=5, o='sum').saveas('temp.bed')
+            sites = bt.BedTool(d_interval).sort(g = 'names.txt').merge(d=d_step-1).saveas('temp.bed')
             os.remove('names.txt')
             del (sites)
             with open('temp.bed')as d_intline:
@@ -150,7 +149,7 @@ elif valid==2:
                 print('\n')
                 os.remove('temp.bed')
                 d_output.close()
-                del (d_open, d_convolve, sys, re, os, time)
+                del (d_open, d_convolve, sys, re, os)
         else:
             print("File \"" + d_interval + "\" is not exist. Check the BED file and it\'s path.")
             exit()
