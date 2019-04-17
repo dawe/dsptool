@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 from pybedtools import BedTool
 import pybedtools as bt
-
 #-----------library import---------------------
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=("""\
 ##############################################################################
@@ -101,9 +100,7 @@ if '--region' in d_arglist:
 elif '-r' in d_arglist:
     valid=1
 del argparse
-
 #--------------optional switiches------------------
-
 if valid==1:
     if re.search('\w{1,12}:\d{1,12}:\d{1,12}$', d_region) == None:
         print("The region of interest must follow the standard structure ChromosomeName:StartBaseIndex:EndBaseIndex")
@@ -130,26 +127,23 @@ if valid==1:
     else:
         print('The chromosome \"'+ d_regname +'\" is not present in the input file.')
         exit()
-
 #--------------region refinement-------------------
 elif valid==2:
     if d_filter!='hanning':
         bed_file = Path(d_interval)
         if bed_file.is_file():
-            sites = bt.BedTool(d_interval).sort(g = 'names.txt').merge(d=d_step-1).saveas('temp.bed')
+            sites = list(bt.BedTool(d_interval).sort(g = 'names.txt').merge(d=d_step-1))
             os.remove('names.txt')
-            del (sites)
-            with open('temp.bed')as d_intline:
-                for line in d_intline:
-                        L = line.strip().split()
-                        d_openvalue = eval('d_open.values("%s", %s, %s, numpy=True)[::d_step]' % (L[0],L[1],L[2]))
-                        d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
-                        d_output.addEntries(str(L[0]), int(L[1]), values=d_convolve, span=50, step=d_step)
-                        #--------------output processings---------------------
-                print('\n')
-                os.remove('temp.bed')
-                d_output.close()
-                del (d_open, d_convolve, sys, re, os)
+            for line in sites:
+                _temp=str(line)
+                L = _temp.strip().split()
+                d_openvalue = d_open.values(L[0], int(L[1]), int(L[2]), numpy=True)[::d_step]
+                d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
+                d_output.addEntries(str(L[0]), int(L[1]), values=d_convolve, span=50, step=d_step)
+                #--------------output processings---------------------
+            print('\n')
+            d_output.close()
+            del (d_open, d_convolve, sys, re, os)
         else:
             print("File \"" + d_interval + "\" is not exist. Check the BED file and it\'s path.")
             exit()
