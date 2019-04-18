@@ -8,6 +8,18 @@ import numpy as np
 from pybedtools import BedTool
 import pybedtools as bt
 #-----------library import---------------------
+class _ListAction(argparse.Action):
+    def __init__(self,option_strings,dest=argparse.SUPPRESS,default=argparse.SUPPRESS,help=None):
+        super(_ListAction, self).__init__(option_strings=option_strings,dest=dest,default=default,nargs=0,help=help)
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(" Haars \n Daubechies \n Symlets \n Coiflets \n Biorthogonal \n Reverse Biorthogonal \n Discrete FIR approximation of Meyer wavelet")
+        parser.exit()
+    #-----------list available filters---------------------
+def _Step():
+    d_step=1
+class _Stepchanger(argparse.Action):
+    _Step()
+    #-----------list available filters---------------------
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=("""\
 ##############################################################################
 ################ dsptool is a tool for ChIP-seq data analysis ################
@@ -23,36 +35,36 @@ Usage:     dsptool -i input -o output -r region [options]
 The dsptool options for denoise include:
 
 [ Main Parameters ]
-    input         Input files must be in BigWig file format.
-    output        A BigWig file that could be explored by IGV.
+    input file         Input files must be in BigWig file format.
+    output file        A BigWig file that could be explored by IGV.
 
 [ Interval Definitions ]
-    region        Apply filter on a specific region defined by chromosome name and location.
-    interval      Cover a list of regions using BED files.
-    entire        Apply filter on the entire BigWig input file.
+    region              Apply filter on a specific region defined by chromosome name and location.
+    interval            Cover a list of regions using BED files.
+    entire              Apply filter on the entire BigWig input file.
 
 [ Optional Parameters ]
-    filter        Scipy signal filter selection change the pattern of applied signal (Blackman by default selected)
-    size          Window size of the filter in the basepair unit.
-    step          The distance between the start of one region and the end of the previous region.
-    span          The fixed distance from the start position which defines a selected region.
+    filter              Scipy signal filter selection change the pattern of applied signal (Blackman by default selected)
+    size                Window size of the filter in the basepair unit.
+    step                The distance between the start of one region and the end of the previous region.
+    span                The fixed distance from the start position which defines a selected region.
 
 [ General help ]
-    help        Print this help menu.
-    version     What version of bedtools are you using?.
+    help                Print this help menu.
+    version             What version of bedtools are you using?.
+    filter list         Print all the available scipy signal filter name that could be apply on input signal. 
 
 """))
 parser.add_argument("-i", "--input", help="Define the name and location of the BigWig file as input. e.g. -i data/File.bw ",required=True)
-parser.add_argument("-o", "--output", help="Define the name and the location of the output BigWig file.", required=True)
+parser.add_argument("-o", "--output", help="Define the name and the location of the output BigWig file", required=True)
 parser.add_argument("-f", "--filter", help="Insert the filter name of Scipy Signal filter list. Blackman filter selected by default", required=False, default="blackman")
-parser.add_argument("-s", "--size", type=int, help="Define the window size of applying filter.", required=False, default="65536")
+parser.add_argument("-s", "--size", type=int, help="Define the window size of applying filter", required=False, default="65536")
 parser.add_argument("-r", "--region", help="A single section of input file could be defined as chromosomename:startindex:endindex")
 parser.add_argument("-l", "--interval", help="A list of regions could be defined as a BED file format")
 parser.add_argument("-S", "--step", type=int, help="The distance between the end point of each region from the relevant start point as basepair", default=50)
-parser.add_argument("-e", "--entire", help="Force program to read all indexes within the selected region")
-parser.add_argument("--list-filters", help="Print all the possible signal filters.")
-parser.add_argument('-V', '--version', action='version', version="%(prog)s (Version 1.0)")
-
+#parser.add_argument('-e', "--entire", action=_Stepchanger, help="Force program to read all indexes within the selected region")
+parser.add_argument("-L", "--list-filters", action=_ListAction, help="Print all the possible signal filters")
+parser.add_argument("-V", "--version", action='version', version="%(prog)s (Version 1.0)")
 args = parser.parse_args()
 d_inputfile = args.input
 d_outputfile = args.output
@@ -68,7 +80,8 @@ if my_file.is_file():
 else:
     print("File \"" + d_inputfile+ "\" is not exist. Check the file name and it\'s path.")
     exit()
-#-----------input validation----------------------
+
+#-----------input/putput validation----------------------
 def WinfuncChecker():
     try:
         tt=eval('scipy.signal.%s' % d_filter)
