@@ -2,7 +2,7 @@
 valid=0
 read_window_size=50
 #------------code starts from here -----------
-import pyBigWig, scipy.signal, sys, argparse, re, os
+import pyBigWig, scipy.signal, sys, argparse, re, os, tempfile
 from pathlib import Path
 import numpy as np
 from pybedtools import BedTool
@@ -81,14 +81,21 @@ WinfuncChecker()
 d_size = d_size >> int(np.log2(read_window_size))
 #--------------size of window corrector-------------
 d_open = pyBigWig.open(d_inputfile)
-d_output = pyBigWig.open(d_outputfile, "w")
-d_output.addHeader(list(d_open.chroms().items()))
+try:
+    d_output = pyBigWig.open(d_outputfile, "w")
+    d_output.addHeader(list(d_open.chroms().items()))
+except IOError:
+    print ("Error: can\'t find path or write data")
+    exit()
+else:
+    print ("File %s created successfully" % d_outputfile)
 d_signal = eval('scipy.signal.%s(%s)' % (d_filter,d_size))
 #--------------common part-------------------------
 templist=list(d_open.chroms())
-with open("names.txt", 'w') as file_handler:
-    for item in templist:
-        file_handler.write("{}\n".format(item))
+tmp = tempfile.NamedTemporaryFile()
+with open(tmp.name, 'w') as _tmp:
+    for line in templist:
+        _tmp.write(str(line+"\n")) 
 #--------------names.txt------------------------
 d_arglist = sys.argv
 if '--interval' in d_arglist:
@@ -131,22 +138,27 @@ if valid==1:
 elif valid==2:
     if d_filter!='hanning':
         bed_file = Path(d_interval)
-        if bed_file.is_file():
-            sites = list(bt.BedTool(d_interval).sort(g = 'names.txt').merge(d=d_step-1))
-            os.remove('names.txt')
-            for line in sites:
-                _temp=str(line)
-                L = _temp.strip().split()
-                d_openvalue = d_open.values(L[0], int(L[1]), int(L[2]), numpy=True)[::d_step]
-                d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
-                d_output.addEntries(str(L[0]), int(L[1]), values=d_convolve, span=50, step=d_step)
-                #--------------output processings---------------------
-            print('\n')
-            d_output.close()
-            del (d_open, d_convolve, sys, re, os)
-        else:
-            print("File \"" + d_interval + "\" is not exist. Check the BED file and it\'s path.")
-            exit()
+        with open(tmp.name) as _tmp:
+            if bed_file.is_file():
+                sys.stdout.write('')
+                sys.stdout.flush()
+                sites = list(bt.BedTool(d_interval).sort(g = _tmp.name).merge(d=d_step-1))
+                for line in sites:
+                    _temp=str(line)
+                    L = _temp.strip().split()
+                    d_openvalue = d_open.values(L[0], int(L[1]), int(L[2]), numpy=True)[::d_step]
+                    d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
+                    sys.stdout.write('\r'+'Working on '+L[0])
+                    sys.stdout.flush()
+                    d_output.addEntries(str(L[0]), int(L[1]), values=d_convolve, span=50, step=d_step)
+                    #--------------output processings---------------------
+                sys.stdout.write('\r'+'Action completed                           ')
+                print('\n')
+                d_output.close()
+                del (d_open, d_convolve, sys, re, os)
+            else:
+                print("File \"" + d_interval + "\" is not exist. Check the BED file and it\'s path.")
+                exit()
     else:
         exit()
 #-------------- interval refinement ------------
