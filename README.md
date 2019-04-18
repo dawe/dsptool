@@ -3,7 +3,18 @@
 # Table of Contents
 
 # Usage
+
 #### Required Extensions:
 > pyBigWig, scipy.signal, sys, argparse, re, os, pathlib, numpy, pybedtools
 
+#### Example Files
+BigWig file   [ENCFF409PGL.bw](https://drive.google.com/open?id=1JYTv_Zj-M6xtNzed5Mk3saG6LMbDUu70)
+
+Bed file   [ENCFF992MBC.bed](https://github.com/dawe/dsptool/blob/master/ENCFF992MBC.bed)
+
 #### Basic usage is as follows:
+python3.7  filter-module.py [-h] -i path/inputfile.bw -o path/output.bw [-f FILTER] [-s SIZE] [-r REGION] [-l INTERVAL] [-S STEP] [-e ENTIRE] [--list-filters] [-V VERSION]
+
+```
+>>> python3.7  filter-module.py -i ENCFF409PGL.bw -o MyResult.bw -l ENCFF992MBC.bed
+```
