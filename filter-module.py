@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.7
 valid=0
 read_window_size=50
 #------------code starts from here -----------
@@ -12,13 +12,8 @@ class _ListAction(argparse.Action):
     def __init__(self,option_strings,dest=argparse.SUPPRESS,default=argparse.SUPPRESS,help=None):
         super(_ListAction, self).__init__(option_strings=option_strings,dest=dest,default=default,nargs=0,help=help)
     def __call__(self, parser, namespace, values, option_string=None):
-        print("Avalable filters for Scipy Signal: \n hann, hamming, blackman")
+        print("Avalable filters for Scipy Signal: \n hann, hamming, blackman,")
         parser.exit()
-    #-----------list available filters---------------------
-def _Step():
-    d_step=1
-class _Stepchanger(argparse.Action):
-    _Step()
     #-----------list available filters---------------------
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=("""\
 ##############################################################################
@@ -62,7 +57,8 @@ parser.add_argument("-s", "--size", type=int, help="Define the window size of ap
 parser.add_argument("-r", "--region", help="A single section of input file could be defined as chromosomename:startindex:endindex")
 parser.add_argument("-l", "--interval", help="A list of regions could be defined as a BED file format")
 parser.add_argument("-S", "--step", type=int, help="The distance between the end point of each region from the relevant start point as basepair", default=50)
-#parser.add_argument('-e', "--entire", action=_Stepchanger, help="Force program to read all indexes within the selected region")
+parser.add_argument("--span", type=int, help="The intended length from the beginning of each step", default=50)
+parser.add_argument('-e', "--entire", action='store_true', help="Force program to read all indexes within the selected region")
 parser.add_argument("-L", "--list-filters", action=_ListAction, help="Print all the possible signal filters")
 parser.add_argument("-V", "--version", action='version', version="%(prog)s (Version 1.0)")
 args = parser.parse_args()
@@ -72,16 +68,22 @@ d_filter = args.filter
 d_size = int(args.size)
 d_region = str(args.region)
 d_step = int(args.step)
+d_span = int(args.span)
 d_interval = args.interval
 #-----------input definitions----------------------
+if args.entire == True:
+    d_step=1
+    d_span=1
 my_file = Path(d_inputfile)
 if my_file.is_file():
     pass
 else:
     print("File \"" + d_inputfile+ "\" is not exist. Check the file name and it\'s path.")
     exit()
-
-#-----------input/putput validation----------------------
+#-----------input/step validation----------------------
+if d_filter=='hanning':
+    print("`hanning` is deprecated, use `scipy.signal.windows.hann` instead!")
+    exit()
 def WinfuncChecker():
     try:
         tt=eval('scipy.signal.%s' % d_filter)
@@ -139,7 +141,7 @@ if valid==1:
         if (int(d_open.chroms(d_regname)) >= int(d_rege)) :
             d_openvalue = eval('d_open.values("%s", %s, %s, numpy=True)[::d_step]' % (d_regname,d_regs,d_rege))
             d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
-            d_output.addEntries(d_regname, int(d_regs), ends=int(d_rege), values=d_convolve, span=50, step=d_step)
+            d_output.addEntries(d_regname, int(d_regs), ends=int(d_rege), values=d_convolve, span=d_span, step=d_step)
             d_output.close()
         else:
             print('Interval definition is incorrect. The length of the chromosome ' + str(d_regname) + ' is ' + str(d_open.chroms(d_regname)) + '. Please correct it and try again.')
@@ -149,36 +151,36 @@ if valid==1:
         exit()
 #--------------region refinement-------------------
 elif valid==2:
-    if d_filter!='hanning':
-        bed_file = Path(d_interval)
-        with open(tmp.name) as _tmp:
-            if bed_file.is_file():
-                sys.stdout.write('')
-                sys.stdout.flush()
-                sites = list(bt.BedTool(d_interval).sort(g = _tmp.name).merge(d=d_step-1))
-                for line in sites:
-                    _temp=str(line)
-                    L = _temp.strip().split()
-                    d_openvalue = d_open.values(L[0], int(L[1]), int(L[2]), numpy=True)[::d_step]
-                    d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
-                    sys.stdout.write('\r'+'Working on '+L[0])
-                    sys.stdout.flush()
-                    d_output.addEntries(str(L[0]), int(L[1]), values=d_convolve, span=50, step=d_step)
-                    #--------------output processings---------------------
-                sys.stdout.write('\r'+'Action completed                           ')
-                print('\n')
-                d_output.close()
-                del (d_open, d_convolve, sys, re, os)
+    bed_file = Path(d_interval)
+    with open(tmp.name) as _tmp:
+        if bed_file.is_file():
+            sys.stdout.write('')
+            sys.stdout.flush()
+            if args.entire == True:
+                sites = list(bt.BedTool(d_interval).sort(g = _tmp.name))
             else:
-                print("File \"" + d_interval + "\" is not exist. Check the BED file and it\'s path.")
-                exit()
-    else:
-        exit()
+                sites = list(bt.BedTool(d_interval).sort(g = _tmp.name).merge(d=d_step-1))
+            for line in sites:
+                _temp=str(line)
+                L = _temp.strip().split()
+                d_openvalue = d_open.values(L[0], int(L[1]), int(L[2]), numpy=True)[::d_step]
+                d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
+                sys.stdout.write('\r'+'Working on '+L[0])
+                sys.stdout.flush()
+                d_output.addEntries(str(L[0]), int(L[1]), values=d_convolve, span=d_span, step=d_step)
+                #--------------output processings---------------------
+            sys.stdout.write('\r'+'Action completed                           ')
+            print('\n')
+            d_output.close()
+            del (d_open, d_convolve, sys, re, os)
+        else:
+            print("File \"" + d_interval + "\" is not exist. Check the BED file and it\'s path.")
+            exit()
 #-------------- interval refinement ------------
 else:
     for line in templist:
         d_openvalue = d_open.values(line, 1, d_open.chroms(line), numpy=True)[::d_step]
         d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
         print("- analyzing chromosome "+line+" from begining to "+str(d_open.chroms(line)))
-        d_output.addEntries(line, 1, ends= d_open.chroms(line), values=d_convolve, span=50, step=d_step)
+        d_output.addEntries(line, 1, ends= d_open.chroms(line), values=d_convolve, span=d_span, step=d_step)
 #-------------- entire chromosome ------------
