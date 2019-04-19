@@ -12,7 +12,7 @@ class _ListAction(argparse.Action):
     def __init__(self,option_strings,dest=argparse.SUPPRESS,default=argparse.SUPPRESS,help=None):
         super(_ListAction, self).__init__(option_strings=option_strings,dest=dest,default=default,nargs=0,help=help)
     def __call__(self, parser, namespace, values, option_string=None):
-        print("Avalable filters for Scipy Signal: \n hann, hamming, blackman,")
+        print("Avalable filters for Scipy Signal: \n hann, hamming, blackman")
         parser.exit()
     #-----------list available filters---------------------
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=("""\
@@ -36,7 +36,7 @@ The dsptool options for denoise include:
 [ Interval Definitions ]
     region              Apply filter on a specific region defined by chromosome name and location.
     interval            Cover a list of regions using BED files.
-    entire              Apply filter on the entire BigWig input file.
+    entire              Apply filter on the entire BigWig input file (One base resolution).
 
 [ Optional Parameters ]
     filter              Scipy signal filter selection change the pattern of applied signal (Blackman by default selected)
@@ -81,20 +81,18 @@ else:
     print("File \"" + d_inputfile+ "\" is not exist. Check the file name and it\'s path.")
     exit()
 #-----------input/step validation----------------------
+d_size = d_size >> int(np.log2(read_window_size))
+#--------------size of window correction-------------
 if d_filter=='hanning':
     print("`hanning` is deprecated, use `scipy.signal.windows.hann` instead!")
     exit()
-def WinfuncChecker():
-    try:
-        tt=eval('scipy.signal.%s' % d_filter)
-    except AttributeError:
-        print("The filter name '%s' for the following command is not valid!" % d_filter)
-        print("scipy.signal.%s " % d_filter)
-        exit()
-WinfuncChecker()
+try:
+    d_signal=eval('scipy.signal.%s(%s)' % (d_filter,d_size))
+except AttributeError:
+    print("The filter name '%s' for the following command is not valid!" % d_filter)
+    print("scipy.signal.%s " % d_filter)
+    exit()
 #--------------filterchecker------------------------
-d_size = d_size >> int(np.log2(read_window_size))
-#--------------size of window corrector-------------
 d_open = pyBigWig.open(d_inputfile)
 try:
     d_output = pyBigWig.open(d_outputfile, "w")
@@ -104,8 +102,7 @@ except IOError:
     exit()
 else:
     print ("File %s created successfully" % d_outputfile)
-d_signal = eval('scipy.signal.%s(%s)' % (d_filter,d_size))
-#--------------common part-------------------------
+#--------------output validation-------------------------
 templist=list(d_open.chroms())
 tmp = tempfile.NamedTemporaryFile()
 with open(tmp.name, 'w') as _tmp:
