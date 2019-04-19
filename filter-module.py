@@ -136,6 +136,13 @@ if valid==1:
     d_rege=d_rege [1:]
     if d_regname in templist:
         if (int(d_open.chroms(d_regname)) >= int(d_rege)) :
+            #--------------------------------------------------
+            d_length=int(d_rege)-int(d_regs)
+            print(d_length)
+            d_min=(d_length/d_step)
+            if d_min < 20:
+                print('Warning: The defined "span" is too large for this interval, it could cause an error in the results because of the number of samples. It is recommended to use the smaller step.')
+            #--------------length / Step------------------------
             d_openvalue = eval('d_open.values("%s", %s, %s, numpy=True)[::d_step]' % (d_regname,d_regs,d_rege))
             d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
             d_output.addEntries(d_regname, int(d_regs), ends=int(d_rege), values=d_convolve, span=d_span, step=d_step)
