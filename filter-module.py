@@ -12,7 +12,7 @@ class _ListAction(argparse.Action):
     def __init__(self,option_strings,dest=argparse.SUPPRESS,default=argparse.SUPPRESS,help=None):
         super(_ListAction, self).__init__(option_strings=option_strings,dest=dest,default=default,nargs=0,help=help)
     def __call__(self, parser, namespace, values, option_string=None):
-        print(" Haars \n Daubechies \n Symlets \n Coiflets \n Biorthogonal \n Reverse Biorthogonal \n Discrete FIR approximation of Meyer wavelet")
+        print("Avalable filters for Scipy Signal: \n hann, morlet, hamming, freqz, blackman")
         parser.exit()
     #-----------list available filters---------------------
 def _Step():
