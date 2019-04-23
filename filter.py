@@ -8,6 +8,16 @@ import numpy as np
 from pybedtools import BedTool
 import pybedtools as bt
 #-----------library import---------------------
+def AVERAGE(segnumber, step, value, zero):         #Improve Picking Accuracy
+    d_matrix = np.matrix(value)
+    d_matrix = np.pad(d_matrix,[(0,0),(0,zero)], mode='constant', constant_values=0)
+    d_matrix = np.reshape(d_matrix,(segnumber, step))
+    masked = np.ma.masked_equal(d_matrix, 0)
+    #print(masked)
+    Result=masked.mean(axis=1)
+    #Result = np.mean(d_matrix,axis=1)
+    return(Result)
+#-----------function Definitions--------------
 class _ListAction(argparse.Action):
     def __init__(self,option_strings,dest=argparse.SUPPRESS,default=argparse.SUPPRESS,help=None):
         super(_ListAction, self).__init__(option_strings=option_strings,dest=dest,default=default,nargs=0,help=help)
@@ -15,7 +25,7 @@ class _ListAction(argparse.Action):
         print("Avalable filters for Scipy Signal: \n hann, hamming, blackman")
         parser.exit()
     #-----------list available filters---------------------
-parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=("""\
+parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=("""
 ##############################################################################
 ################ dsptool is a tool for ChIP-seq data analysis ################
 ##############################################################################
@@ -121,30 +131,37 @@ elif '-r' in d_arglist:
 del argparse
 #--------------optional switiches------------------
 if valid==1:
-    if re.search('\w{1,12}:\d{1,12}:\d{1,12}$', d_region) == None:
-        print("The region of interest must follow the standard structure ChromosomeName:StartBaseIndex:EndBaseIndex")
+    if re.search('\w{1,12}:\d{1,12}-\d{1,12}$', d_region) == None:
+        print("The region of interest must follow the standard structure ChromosomeName:StartBaseIndex-EndBaseIndex")
         exit()
 
-    x = re.match('\w{1,10}:', d_region)
-    xx = re.search(':\d{1,10}:', d_region)
-    xxx = re.search(':\d{1,14}$', d_region)
-    d_regname=x.group(0)
+    _x = re.match('\w{1,10}:', d_region)
+    _xx = re.search(':\d{1,10}-', d_region)
+    _xxx = re.search('-\d{1,14}$', d_region)
+    d_regname=_x.group(0)
     d_regname=d_regname [:-1]
-    d_regs=xx.group(0)
+    d_regs=_xx.group(0)
     d_regs=d_regs [1:-1]
-    d_rege=xxx.group(0)
+    d_rege=_xxx.group(0)
     d_rege=d_rege [1:]
+    d_rege=int(d_rege)+1
     if d_regname in templist:
-        if (int(d_open.chroms(d_regname)) >= int(d_rege)) :
-            #--------------------------------------------------
-            d_length=int(d_rege)-int(d_regs)
-            print(d_length)
-            d_min=(d_length/d_step)
-            if d_min < 20:
+        if (int(d_open.chroms(d_regname)) >= (d_rege)) :
+            d_openvalue = d_open.values(d_regname, int(d_regs), d_rege, numpy=True)#[::d_step]
+            d_length=len(d_openvalue)
+            d_segnum=(d_length/d_step)
+            if d_segnum < 20:
                 print('Warning: The defined "span" is too large for this interval, it could cause an error in the results because of the number of samples. It is recommended to use the smaller step.')
+            if d_length % d_step == 0:
+                d_dif=0
+                d_segnum=int(d_segnum)
+            else:
+                d_segnum=int(d_segnum)+1
+                d_dif=(d_segnum*d_step)-d_length
+
+            d_averages=AVERAGE(d_segnum,d_step,d_openvalue,d_dif)
             #--------------length / Step------------------------
-            d_openvalue = eval('d_open.values("%s", %s, %s, numpy=True)[::d_step]' % (d_regname,d_regs,d_rege))
-            d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
+            d_convolve = scipy.signal.fftconvolve(d_averages, d_signal, mode="same")
             d_output.addEntries(d_regname, int(d_regs), ends=int(d_rege), values=d_convolve, span=d_span, step=d_step)
             d_output.close()
         else:
@@ -167,8 +184,17 @@ elif valid==2:
             for line in sites:
                 _temp=str(line)
                 L = _temp.strip().split()
-                d_openvalue = d_open.values(L[0], int(L[1]), int(L[2]), numpy=True)[::d_step]
-                d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
+                d_openvalue = d_open.values(L[0], int(L[1]), int(L[2]), numpy=True)#[::d_step]
+                d_length=len(d_openvalue)
+                d_segnum=(d_length/d_step)
+                if d_length % d_step == 0:
+                    d_dif=0
+                    d_segnum=int(d_segnum)
+                else:
+                    d_segnum=int(d_segnum)+1
+                    d_dif=(d_segnum*d_step)-d_length
+                d_averages=AVERAGE(d_segnum,d_step,d_openvalue,d_dif)
+                d_convolve = scipy.signal.fftconvolve(d_averages, d_signal, mode="same")[::d_step]
                 sys.stdout.write('\r'+'Working on '+L[0])
                 sys.stdout.flush()
                 d_output.addEntries(str(L[0]), int(L[1]), values=d_convolve, span=d_span, step=d_step)
@@ -188,3 +214,4 @@ else:
         print("- analyzing chromosome "+line+" from begining to "+str(d_open.chroms(line)))
         d_output.addEntries(line, 1, ends= d_open.chroms(line), values=d_convolve, span=d_span, step=d_step)
 #-------------- entire chromosome ------------
+#-----------------------------------------------END OF DENOISING PART---------------------------------
