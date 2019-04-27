@@ -131,18 +131,15 @@ elif '-r' in d_arglist:
 del argparse
 # --------------optional switiches------------------
 if valid==1:
-    if re.search('\w{1,12}:\d{1,12}-\d{1,12}$', d_region) == None:
+    try:
+        _splited = d_region.strip().split(':')
+        d_regname = _splited[0]
+        _splited = _splited[1].strip().split('-')
+        d_regs = int(_splited[0])
+        d_rege = int(_splited[1])
+    except:
         sys.stdout.write('The region of interest must follow the standard pattern ChromosomeName:StartBaseIndex-EndBaseIndex\n')
         exit()
-    _x = re.match('\w{1,10}:', d_region)
-    _xx = re.search(':\d{1,10}-', d_region)
-    _xxx = re.search('-\d{1,13}$', d_region)
-    d_regname=_x.group(0)
-    d_regname=d_regname [:-1]
-    d_regs=_xx.group(0)
-    d_regs=d_regs [1:-1]
-    d_rege=_xxx.group(0)
-    d_rege=d_rege [1:]
     d_rege=int(d_rege)+1                                     # The end location could have value which should keep in mind
     if d_regname in templist:                                # If the request chromosome name present in the input file process starts
         if (int(d_open.chroms(d_regname)) >= (d_rege)) :     # If the region of interest present in the input file goes ahead
@@ -150,7 +147,7 @@ if valid==1:
             d_length=len(d_openvalue)
             d_segnum=(d_length/d_step)
             if d_segnum < 20:                                # If the size of step is too large for the region of interest, in a way that less that 20 steps called, the warning appears and program continues
-                sys.stdout.write('Warning: The defined "span" is too large for this interval, it could cause an error in the results because of the number of samples. It is recommended to use the smaller step.')
+                sys.stdout.write('Warning: The defined "span" is too large for this interval, it could cause an error in the results because of the number of samples. It is recommended to use the smaller step\n')
             if d_length % d_step == 0:                       # Find the number of required cells to fill the matrix by AVERAGE function
                 d_dif=0
                 d_segnum=int(d_segnum)
@@ -164,7 +161,7 @@ if valid==1:
             d_output.addEntries(d_regname, int(d_regs), ends=int(d_rege), values=d_convolve, span=d_span, step=d_step)      # Write the combined values for the region of intreset to the output file
             d_output.close()
         else:
-            sys.stdout.write('Interval definition is incorrect. The length of the chromosome ' + str(d_regname) + ' is ' + str(d_open.chroms(d_regname)) + '. Please correct it and try again.')
+            sys.stdout.write('Interval definition is incorrect. The length of the chromosome ' + str(d_regname) + ' is ' + str(d_open.chroms(d_regname)) + '. Please correct it and try again.\n')
             exit()
     else:
         sys.stdout.write('The chromosome \"'+ d_regname +'\" is not present in the input file.\n')
