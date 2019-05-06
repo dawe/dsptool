@@ -1,6 +1,5 @@
 # !/usr/bin/env python3.7
-valid=0                                                                                                # Variable definitions
-read_window_size=50                                                                                    # Windows size that applied on the BW files
+valid, d_war, read_window_size = 0, 0, 50                                                                                                # Variable definitions
 # ------------code starts from here ---------------------------------------------------------------------
 import pyBigWig, scipy.signal, sys, argparse, re, os, tempfile
 from pathlib import Path
@@ -9,14 +8,16 @@ from pybedtools import BedTool
 import pybedtools as bt
 # -----------library import-----------------------------------------------------------------------------
 sys.stdout.write("\n")
-def AVERAGE(segnumber, step, value, zero):                                                            # Improve Picking Accuracy
-    d_matrix = np.matrix(value)                                                                       # Define a matrix with the values of BigWig file
-    d_matrix = np.pad(d_matrix,[(0,0),(0,zero)], mode='constant', constant_values=0.000000001)        # fill the free cells of the matrix with a small and unique values
-    d_matrix = np.reshape(d_matrix,(segnumber, step))                                                 # reshape the matrix from the one dimensional to step size rows and multiple columns
-    masked = np.ma.masked_equal(d_matrix, 0.000000001)                                                # Create a mask and remove the value of the added cells
-    # print(masked)
-    Result=masked.mean(axis=1)                                                                        # Mean of the rows
-    return(Result)                                                                                    # Returns the array of the means
+def AverageofRegion(value, step=50):
+    d_matrix = [value]
+    zero = step - (len(value) % step)                                                            # Improve Picking Accuracy
+    segnum = len(value) // step
+    if zero > 0:                       # Find the number of required cells to fill the matrix by AVERAGE function
+        segnum += 1
+    d_matrix = np.pad(d_matrix,[(0,0),(0,zero)], mode='constant', constant_values=0)        # fill the free cells of the matrix with a small and unique values
+    d_matrix = np.reshape(d_matrix,(segnum, step))                                             # reshape the matrix from the one dimensional to step size rows and multiple columns
+    Result=d_matrix.mean(axis=1)                                                                        # Mean of the rows
+    return(Result)
 # -----------function Definitions-----------------------------------------------------------------------
 class _ListAction(argparse.Action):                                                                   # Define a class for the optional parameter "--list-filters"
     def __init__(self,option_strings,dest=argparse.SUPPRESS,default=argparse.SUPPRESS,help=None):
@@ -88,18 +89,18 @@ my_file = Path(d_inputfile)         # Location of the input file stores on "my_f
 if my_file.is_file():               # Check the path/file presence or not
     pass
 else:
-    sys.stdout.write('File '+ d_inputfile +' is not exist. Check the file name and it\'s path.\n')
+    sys.stderr.write('File '+ d_inputfile +' is not exist. Check the file name and it\'s path.\n')
     exit()
 # -----------input/step validation----------------------
 d_size = d_size >> int(np.log2(read_window_size))       # Window size of the signal resized regaurd the input file
 # --------------size of window correction-------------
 if d_filter=='hanning':              # Prevent to continue with old filter name which arise the internal error from scipy pakage
-    sys.stdout.write('`hanning` is deprecated, use `scipy.signal.windows.hann` instead!\n')
+    sys.stderr.write('`hanning` is deprecated, use `scipy.signal.windows.hann` instead!\n')
     exit()
 try:                                 # Apply the filter name and windows size, if there is any problem with them, a clean exit with a message that points to the filter name will show
     d_signal=eval('scipy.signal.%s(%s)' % (d_filter,d_size))
 except AttributeError:
-    sys.stdout.write("The filter name "+ d_filter +" for the following command is not valid!\n scipy.signal." + d_filter)
+    sys.stderr.write("The filter name "+ d_filter +" for the following command is not valid!\n scipy.signal." + d_filter)
     exit()
 # --------------filterchecker------------------------
 d_open = pyBigWig.open(d_inputfile)     # define the call the input bigwig file by pyBigWig library function on a variable
@@ -107,11 +108,10 @@ d_open = pyBigWig.open(d_inputfile)     # define the call the input bigwig file 
 try:                                    # check if the output file cannot be created because of the output folder does not exist or permissions an error message with clean exit will occur
     d_output = pyBigWig.open(d_outputfile, "w")
 except IOError:
-    sys.stdout.write("\n The PATH/FILE `"+ d_outputfile +"` has not write permission, please check the path and try again. \n")
+    sys.stderr.write("\n The PATH/FILE `"+ d_outputfile +"` has not write permission, please check the path and try again. \n")
     exit()
 else:
     d_output.addHeader(list(d_open.chroms().items()))
-    sys.stdout.write("File "+ d_outputfile +" created successfully \n")
 # --------------output validation-------------------------
 templist=list(d_open.chroms())          # Define the temp list by all the chromosme names that present with in the input file (BigWig)
 tmp = tempfile.NamedTemporaryFile()     # define a temperory file and put the list of the chromosome name inside it, because the Bedtools does not accept the list as a variable
@@ -138,33 +138,25 @@ if valid==1:
         d_regs = int(_splited[0])
         d_rege = int(_splited[1])
     except:
-        sys.stdout.write('The region of interest must follow the standard pattern ChromosomeName:StartBaseIndex-EndBaseIndex\n')
+        sys.stderr.write('The region of interest must follow the standard pattern ChromosomeName:StartBaseIndex-EndBaseIndex\n')
         exit()
-    d_rege=int(d_rege)+1                                     # The end location could have value which should keep in mind
     if d_regname in templist:                                # If the request chromosome name present in the input file process starts
         if (int(d_open.chroms(d_regname)) >= (d_rege)) :     # If the region of interest present in the input file goes ahead
-            d_openvalue = d_open.values(d_regname, int(d_regs), d_rege, numpy=True)# [::d_step]          # ????????????
+            d_openvalue = d_open.values(d_regname, int(d_regs), d_rege, numpy=True)          # Sample once a step (each 50 bases)
             d_length=len(d_openvalue)
-            d_segnum=(d_length/d_step)
+            d_segnum=(d_length//d_step)
             if d_segnum < 20:                                # If the size of step is too large for the region of interest, in a way that less that 20 steps called, the warning appears and program continues
-                sys.stdout.write('Warning: The defined "span" is too large for this interval, it could cause an error in the results because of the number of samples. It is recommended to use the smaller step\n')
-            if d_length % d_step == 0:                       # Find the number of required cells to fill the matrix by AVERAGE function
-                d_dif=0
-                d_segnum=int(d_segnum)
-            else:
-                d_segnum=int(d_segnum)+1
-                d_dif=(d_segnum*d_step)-d_length
-
-            d_averages=AVERAGE(d_segnum,d_step,d_openvalue,d_dif)   # Calclate the average of values relative to the each step and store the result as an array
+                sys.stderr.write('Warning: The defined "span" is too large for this interval, it could cause an error in the results because of the number of samples. It is recommended to use the smaller step\n')
+            d_averages=AverageofRegion(d_openvalue,d_step)   # Calclate the average of values relative to the each step and store the result as an array
             # --------------length / Step------------------------
             d_convolve = scipy.signal.fftconvolve(d_averages, d_signal, mode="same")        # Combine signals derived from the step's value by filter with specific windows size
             d_output.addEntries(d_regname, int(d_regs), ends=int(d_rege), values=d_convolve, span=d_span, step=d_step)      # Write the combined values for the region of intreset to the output file
             d_output.close()
         else:
-            sys.stdout.write('Interval definition is incorrect. The length of the chromosome ' + str(d_regname) + ' is ' + str(d_open.chroms(d_regname)) + '. Please correct it and try again.\n')
+            sys.stderr.write('Interval definition is incorrect. The length of the chromosome ' + str(d_regname) + ' is ' + str(d_open.chroms(d_regname)) + '. Please correct it and try again.\n')
             exit()
     else:
-        sys.stdout.write('The chromosome \"'+ d_regname +'\" is not present in the input file.\n')
+        sys.stderr.write('The chromosome \"'+ d_regname +'\" is not present in the input file.\n')
         exit()
 # --------------region refinement-------------------
 elif valid==2:                      # If the user defined an Bed file these codes run
@@ -172,7 +164,6 @@ elif valid==2:                      # If the user defined an Bed file these code
     with open(tmp.name) as _tmp:    # Call temprory file
         if bed_file.is_file():      # Check if the Bed file present, continue
             sys.stdout.write('')    # Print a standard output
-            sys.stdout.flush()          # in order to make sure that it behaves like the print function
             if args.entire == True:         # If user use the "-e" switch, Step changes to 1
                 sites = list(bt.BedTool(d_interval).sort(g = _tmp.name))        # Interval data derived from Bed file sorts by name
             else:
@@ -180,34 +171,34 @@ elif valid==2:                      # If the user defined an Bed file these code
             for line in sites:                  # For each interval the value reads and stored in a varible
                 _temp=str(line)
                 L = _temp.strip().split()
-                d_openvalue = d_open.values(L[0], int(L[1]), int(L[2]), numpy=True)# [::d_step]        # ????
-                d_length=len(d_openvalue)
-                d_segnum=(d_length/d_step)      # The number of columns of matrix is equal to the step-size, so the number of rows are the length devided by step-size
-                if d_length % d_step == 0:      # If divmod is zero it means the length of the string is fit to the matrix
-                    d_dif=0
-                    d_segnum=int(d_segnum)
+                d_length = int(L[2])- int(L[1])
+                d_openvalue = d_open.values(L[0], int(L[1]), int(L[2]), numpy=True)#[::d_step]        # sample once a step
+                if d_length > d_step:               # -----> region AverageofRegion
+                    d_averages=AverageofRegion(d_openvalue, d_step)   # Calclate the average of values relative to the each step and store the result as an array
                 else:
-                    d_segnum=int(d_segnum)+1
-                    d_dif=(d_segnum*d_step)-d_length
-                d_averages=AVERAGE(d_segnum,d_step,d_openvalue,d_dif)
-                d_convolve = scipy.signal.fftconvolve(d_averages, d_signal, mode="same")[::d_step]      # Combine signals derived from the input file for each step's value by filter with specific windows size
+                    d_averages=d_openvalue
+                    d_warning=1
+                d_convolve = scipy.signal.fftconvolve(d_averages, d_signal, mode="same")#[::d_step]      # Combine signals derived from the input file for each step's value by filter with specific windows size
                 sys.stdout.write('\r'+'Working on '+L[0])       # Update the standard output
                 sys.stdout.flush()
                 d_output.addEntries(str(L[0]), int(L[1]), values=d_convolve, span=d_span, step=d_step)  # Write the combined values for each interval to the output file
                 # --------------output processings---------------------
             sys.stdout.write('\r'+'Action completed                           \n')
             d_output.close()
-            del (d_open, d_convolve, sys, re, os)
         else:
-            sys.stdout.write("File \"" + d_interval + "\" is not exist. Check the BED file and it\'s path.")
+            sys.stderr.write("File \"" + d_interval + "\" is not exist. Check the BED file and it\'s path.")
             exit()
+    if d_warning==1:
+        sys.stderr.write('Warning: The defined "span" is too large for this interval, it could cause an error in the results because of the number of samples. It is recommended to use the smaller step\n')
 # -------------- interval refinement ------------
 else:
+    del (os, Path, BedTool, bt)
     for line in templist:     # For each interval the value reads and stored in a varible for the entire input data
-        d_openvalue = d_open.values(line, 1, d_open.chroms(line), numpy=True)[::d_step]
+        d_openvalue = d_open.values(line, 1, d_open.chroms(line), numpy=True)
+        d_openvalue = AverageofRegion(d_openvalue, d_step)
         d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
         sys.stdout.write("- Analyzing chromosome "+line+" from begining to "+str(d_open.chroms(line))+"\n")
         sys.stdout.flush()
         d_output.addEntries(line, 1, ends= d_open.chroms(line), values=d_convolve, span=d_span, step=d_step)
+        del (d_openvalue)
 # -------------- entire chromosome ------------
-# -----------------------------------------------END OF DENOISING PART---------------------------------
