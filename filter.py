@@ -1,5 +1,5 @@
 # !/usr/bin/env python3.7
-d_warning, read_window_size = False, 50
+Target, d_warning, read_window_size ='Entire', False, 50
 PACKAGES=['pyBigWig', 'scipy', 'sys', 'argparse', 're', 'os', 'tempfile', 'time', 'numpy', 'pybedtools', 'pathlib', 'scipy', 'UliEngineering']
 
 # -----------library import-----------------------------------------------------------------------------
@@ -11,22 +11,27 @@ for i in PACKAGES:
         # create a global object containging our module
         globals()[i] = module_obj
     except:
-        print('The required package \"',i,'\" is not present.\n')
+        print('The required package ',i,' is not present.\n')
         question = input("Would you like to install it? (Y/N)").lower()
         if question == 'y':
-            import pip, subprocess, sys
-            # Install the missing package using pip, then import it
-            subprocess.call([sys.executable, "-m", "pip", "install", i])
-            module_obj = __import__(i)
-            # create a global object containging our module
-            globals()[i] = module_obj
+            try:
+                import pip, subprocess, sys
+                # Install the missing package using pip, then import it
+                subprocess.call([sys.executable, "-m", "pip", "install", i])
+                module_obj = __import__(i)
+                # create a global object containging our module
+                globals()[i] = module_obj
+            except:
+                if i == 'pyBigWig':
+                    os.system('conda install pybigwig -c bioconda')
+                elif i == 'pybedtools':
+                    os.system('conda install --channel conda-forge --channel bioconda pybedtools')
         else:
             print('Please intsall \"',i,'\" package and retry.')
             exit()
 import scipy.signal
 
 # -----------function Definitions-----------------------------------------------------------------------
-start_time = time.time()
 # The function increase the accuracy of sampling when Step is higher than 1. Two parameters are used in this fuction, VALUE is a list of intensities that loaded from input file related to the specific regions and STEP is the distance between each sample through out this regions.
 def AverageofRegion(VALUE, STEP=50):
     if STEP==1:
@@ -97,6 +102,7 @@ parser.add_argument("--span", type=int, help="The intended length from the begin
 parser.add_argument('-e', "--entire", action='store_true', help="Define the entire input BigWig file as the selected region.")
 parser.add_argument("-L", "--list-filters", action=_ListAction, help="Print all the possible signal filters")
 parser.add_argument("-H", "--highresolution", action='store_true', help="Force the program to define step and span equal to 1 to have the highest resolution as possible (One base resolution)")
+parser.add_argument("-seg", "--segmentation", action='store_true', help="Run segmentation")
 parser.add_argument("-V", "--version", action='version', version="%(prog)s (Version 1.0)")
 # Use "args" instead of the subcommand "parse_args"
 args = parser.parse_args()
@@ -153,11 +159,13 @@ else:
 
 # --------------names.txt------------------------
 # Define the temp list by all the chromosome names that present within the input file (BigWig)
-templist=list(d_open.chroms())
+chrlist=list(d_open.chroms())
+Header=list(d_open.chroms().items())
 
 # --------------region refinement-------------------
 # If switch "r" or "Region" defined by the user, the inserted value must follow the standard pattern that contains chromosome name, start and end coordinates
 if d_region:
+    Target = 'Region'
     try:
         # Characters before column-sign should be a chromosome name
         _splited = d_region.strip().split(':')
@@ -170,28 +178,34 @@ if d_region:
         sys.stderr.write('The region of interest must follow the standard pattern ChromosomeName:StartBaseIndex-EndBaseIndex\n')
         exit()
     # If the request chromosome name present in the input file process starts
-    if d_regname in templist:
+    if d_regname in chrlist:
         # If the region of interest present in the input file, the program goes ahead
-        if (int(d_open.chroms(d_regname)) >= (d_rege)) :
-            try:
-                # Sample once a step (defult each 50 bases)
-                d_openvalue = d_open.values(d_regname, int(d_regs), d_rege, numpy=True)
-                # It is important to define a proper step size, if large step size for short segment, results false negative
-                if len(d_openvalue) < d_step*20:
-                    d_warning=True
-                # Instead of intensity of one point, the average of values relative to the each step used
-                d_averages=AverageofRegion(d_openvalue,d_step)
-                # Combine signals derived from the input value by filter with specific windows size
-                d_convolve = scipy.signal.fftconvolve(d_averages, d_signal, mode="same")
-                # Write the combined values for the region of intreset to the output file and close it
-                d_output.addEntries(d_regname, int(d_regs), ends=int(d_rege), values=d_convolve, span=d_span, step=d_step)
-                d_output.close()
-            except:
-                sys.stderr.write('Interval definition or step size is incorrect.\n')
+        if (int(d_open.chroms(d_regname)) < (d_rege)) :
+            sys.stderr.write('Interval definition is incorrect. The length of the chromosome ' + str(d_regname) + ' is ' + str(d_open.chroms(d_regname)) + '.\n')
+            question = input('Do you want to continue with ' + str(d_open.chroms(d_regname)) + ' ? (Y/N)').lower()
+            if question == 'y':
+                print('yes')
+                d_rege = int(d_open.chroms(d_regname))
+            else:
+                print('no')
                 exit()
-        else:
-            sys.stderr.write('Interval definition is incorrect. The length of the chromosome ' + str(d_regname) + ' is ' + str(d_open.chroms(d_regname)) + '. Please correct it and try again.\n')
+        try:
+            # Sample once a step (defult each 50 bases)
+            d_openvalue = d_open.values(d_regname, int(d_regs), d_rege, numpy=True)
+            # It is important to define a proper step size, if large step size for short segment, results false negative
+            if len(d_openvalue) < d_step*20:
+                d_warning=True
+            # Instead of intensity of one point, the average of values relative to the each step used
+            d_averages=AverageofRegion(d_openvalue,d_step)
+            # Combine signals derived from the input value by filter with specific windows size
+            d_convolve = scipy.signal.fftconvolve(d_averages, d_signal, mode="same")
+            # Write the combined values for the region of intreset to the output file and close it
+            d_output.addEntries(d_regname, int(d_regs), ends=int(d_rege), values=d_convolve, span=d_span, step=d_step)
+            d_output.close()
+        except:
+            sys.stderr.write('Interval definition or step size is incorrect.\n')
             exit()
+
     else:
         sys.stderr.write('The chromosome \"'+ d_regname +'\" is not present in the input file.\n')
         exit()
@@ -199,12 +213,13 @@ if d_region:
 # -------------- interval refinement ------------
 # If switch "l" or "Interval" defined by the user, a BED file must be introduced
 elif d_interval:
+    Target = 'Region'
     # Store the file name and location in one array
     bed_file = pathlib.Path(d_interval)
     # define a temperory file and put the list of the chromosome name inside it, because the Bedtools does not accept the list as a array
     tmp = tempfile.NamedTemporaryFile()
     with open(tmp.name, 'w') as _tmp:
-        for line in templist:
+        for line in chrlist:
             _tmp.write(str(line+"\n"))
     # Call temprory file
     with open(tmp.name) as _tmp:
@@ -221,6 +236,7 @@ elif d_interval:
                 _temp=str(line)
                 L = _temp.strip().split()
                 d_openvalue = d_open.values(L[0], int(L[1]), int(L[2]), numpy=True)
+                d_regname,d_regs=L[0],int(L[1])
                 # Instead of intensity of one point, the average of values relative to the each step used
                 d_averages=AverageofRegion(d_openvalue, d_step)
                 # It is important to define a proper step size, if large step size for short segment, results false negative
@@ -247,23 +263,43 @@ elif d_interval:
 # -------------- entire chromosome ------------
 # If any specific region/interval did not define by the user, the entire inputfile value from the beginning to the end will be processed
 else:
+    IntVal = {}
     # For each chromosome of the entire input data, the value reads and stored in a varible
-    for line in templist:
+    for line in chrlist:
+        # This process may takes time, so one message informs the process stage
+        sys.stdout.write("- Analyzing chromosome "+line+" from begining to "+str(d_open.chroms(line))+"\n")
+        # Update the standard output
+        sys.stdout.flush()
         d_openvalue = d_open.values(line, 1, d_open.chroms(line), numpy=True)
         # Instead of intensity of one point, the average of values relative to the each step used
         d_openvalue = AverageofRegion(d_openvalue, d_step)
         # Combine signals derived from the input file for each step's value by filter with specific windows size
         d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
-        # This process may takes time, so one message informs the process stage
-        sys.stdout.write("- Analyzing chromosome "+line+" from begining to "+str(d_open.chroms(line))+"\n")
-        # Update the standard output
-        sys.stdout.flush()
         # Write the combined values for each interval to the output file
         d_output.addEntries(line, 1, ends= d_open.chroms(line), values=d_convolve, span=d_span, step=d_step)
+        if args.segmentation:
+            try:
+                s_output = pyBigWig.open("Peaks.bw", "w")
+                s_output.addHeader(Header)
+            except IOError:
+                sys.stderr.write("\n No permission to write. \n")
+                exit()
+            import segmentation as SG
+            ZeroCrossList=SG.Sobel_filters(d_convolve)     #using ndimage
+            ListofMaxima, ListofMinima, ListofPlateau = SG.Maxima(ZeroCrossList)
+            MergedList=SG.Merge(ListofMaxima,ListofPlateau)
+            j,k=0,0
+            for i in MergedList:
+                if d_step >= i-j:
+                    pass
+                else:
+                    k = i*d_step
+                    intensity = d_convolve[i]
+                    j = i
+            s_output.addEntries(line, k, values=[intensity], span=d_span, step=d_step)
+    s_output.close()
     d_output.close()
-    
 # --------------  WARNING  ------------
 # If the ratio of region/interval size and step size is not ideal, a warning message prints for the user
 if d_warning==True:
     sys.stderr.write('Warning: The defined \"span\" %s is too large for at least one interval, it could cause an error in the results because of the number of samples. It is recommended to use the smaller step.\n' % d_span)
-print("%.2f seconds" % (time.time()-start_time))
