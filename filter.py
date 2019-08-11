@@ -1,7 +1,6 @@
 # !/usr/bin/env python3.7
 Target, d_warning, read_window_size ='Entire', False, 50
-PACKAGES=['pyBigWig', 'scipy', 'sys', 'argparse', 're', 'os', 'tempfile', 'time', 'numpy', 'pybedtools', 'pathlib', 'scipy', 'UliEngineering']
-
+PACKAGES=['pyBigWig', 'scipy', 'sys', 'argparse', 're', 'os', 'tempfile', 'time', 'numpy', 'pybedtools', 'pathlib', 'scipy', 'UliEngineering','gc']
 # -----------library import-----------------------------------------------------------------------------
 # Check whether all the required packages are installed or not, one by one
 for i in PACKAGES:
@@ -30,7 +29,7 @@ for i in PACKAGES:
             print('Please intsall \"',i,'\" package and retry.')
             exit()
 import scipy.signal
-
+gc.enable()
 # -----------function Definitions-----------------------------------------------------------------------
 # The function increase the accuracy of sampling when Step is higher than 1. Two parameters are used in this fuction, VALUE is a list of intensities that loaded from input file related to the specific regions and STEP is the distance between each sample through out this regions.
 def AverageofRegion(VALUE, STEP=50):
@@ -182,12 +181,11 @@ if d_region:
         # If the region of interest present in the input file, the program goes ahead
         if (int(d_open.chroms(d_regname)) < (d_rege)) :
             sys.stderr.write('Interval definition is incorrect. The length of the chromosome ' + str(d_regname) + ' is ' + str(d_open.chroms(d_regname)) + '.\n')
-            question = input('Do you want to continue with ' + str(d_open.chroms(d_regname)) + ' ? (Y/N)').lower()
+            question = input('Do you want to continue with EndCoordinate=' + str(d_open.chroms(d_regname)) + ' ? (Y/N)').lower()
             if question == 'y':
-                print('yes')
                 d_rege = int(d_open.chroms(d_regname))
             else:
-                print('no')
+                print('Please correct the end coordinate and try again.')
                 exit()
         try:
             # Sample once a step (defult each 50 bases)
@@ -263,7 +261,6 @@ elif d_interval:
 # -------------- entire chromosome ------------
 # If any specific region/interval did not define by the user, the entire inputfile value from the beginning to the end will be processed
 else:
-    IntVal = {}
     # For each chromosome of the entire input data, the value reads and stored in a varible
     for line in chrlist:
         # This process may takes time, so one message informs the process stage
@@ -297,7 +294,8 @@ else:
                     intensity = d_convolve[i]
                     j = i
             s_output.addEntries(line, k, values=[intensity], span=d_span, step=d_step)
-    s_output.close()
+    if args.segmentation:
+        s_output.close()
     d_output.close()
 # --------------  WARNING  ------------
 # If the ratio of region/interval size and step size is not ideal, a warning message prints for the user
