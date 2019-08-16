@@ -1,5 +1,5 @@
 # !/usr/bin/env python3.7
-Target, d_warning, read_window_size ='Entire', False, 50
+Target, d_warning, esc, read_window_size ='Entire', False, False, 50
 PACKAGES=['pyBigWig', 'scipy', 'sys', 'argparse', 're', 'os', 'tempfile', 'time', 'numpy', 'pybedtools', 'pathlib', 'scipy', 'UliEngineering','gc']
 # -----------library import-----------------------------------------------------------------------------
 # Check whether all the required packages are installed or not, one by one
@@ -98,10 +98,10 @@ parser.add_argument("-r", "--region", help="A single section of input file could
 parser.add_argument("-l", "--interval", help="A list of regions could be defined as a BED file format")
 parser.add_argument("-S", "--step", type=int, help="The distance between the end point of each region from the relevant start point as basepair, the default step size is 50bps.", default=50)
 parser.add_argument("--span", type=int, help="The intended length from the beginning of each step, the default span is 50bps.", default=50)
-parser.add_argument('-e', "--entire", action='store_true', help="Define the entire input BigWig file as the selected region.")
 parser.add_argument("-L", "--list-filters", action=_ListAction, help="Print all the possible signal filters")
 parser.add_argument("-H", "--highresolution", action='store_true', help="Force the program to define step and span equal to 1 to have the highest resolution as possible (One base resolution)")
 parser.add_argument("-seg", "--segmentation", action='store_true', help="Run segmentation")
+parser.add_argument("-p", "--peak", help="Name of the segmentation file.")
 parser.add_argument("-V", "--version", action='version', version="%(prog)s (Version 1.0)")
 # Use "args" instead of the subcommand "parse_args"
 args = parser.parse_args()
@@ -193,6 +193,8 @@ if d_region:
             # It is important to define a proper step size, if large step size for short segment, results false negative
             if len(d_openvalue) < d_step*20:
                 d_warning=True
+                if len(d_openvalue) < d_step:
+                    exit()
             # Instead of intensity of one point, the average of values relative to the each step used
             d_averages=AverageofRegion(d_openvalue,d_step)
             # Combine signals derived from the input value by filter with specific windows size
@@ -201,6 +203,7 @@ if d_region:
             d_output.addEntries(d_regname, int(d_regs), ends=int(d_rege), values=d_convolve, span=d_span, step=d_step)
             d_output.close()
         except:
+            esc=True
             sys.stderr.write('Interval definition or step size is incorrect.\n')
             exit()
 
@@ -264,7 +267,7 @@ else:
     # For each chromosome of the entire input data, the value reads and stored in a varible
     for line in chrlist:
         # This process may takes time, so one message informs the process stage
-        sys.stdout.write("- Analyzing chromosome "+line+" from begining to "+str(d_open.chroms(line))+"\n")
+        sys.stdout.write("- Denoising chromosome "+line+" from begining to "+str(d_open.chroms(line))+"\n")
         # Update the standard output
         sys.stdout.flush()
         d_openvalue = d_open.values(line, 1, d_open.chroms(line), numpy=True)
@@ -274,30 +277,8 @@ else:
         d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
         # Write the combined values for each interval to the output file
         d_output.addEntries(line, 1, ends= d_open.chroms(line), values=d_convolve, span=d_span, step=d_step)
-        if args.segmentation:
-            try:
-                s_output = pyBigWig.open("Peaks.bw", "w")
-                s_output.addHeader(Header)
-            except IOError:
-                sys.stderr.write("\n No permission to write. \n")
-                exit()
-            import segmentation as SG
-            ZeroCrossList=SG.Sobel_filters(d_convolve)     #using ndimage
-            ListofMaxima, ListofMinima, ListofPlateau = SG.Maxima(ZeroCrossList)
-            MergedList=SG.Merge(ListofMaxima,ListofPlateau)
-            j,k=0,0
-            for i in MergedList:
-                if d_step >= i-j:
-                    pass
-                else:
-                    k = i*d_step
-                    intensity = d_convolve[i]
-                    j = i
-            s_output.addEntries(line, k, values=[intensity], span=d_span, step=d_step)
-    if args.segmentation:
-        s_output.close()
     d_output.close()
 # --------------  WARNING  ------------
 # If the ratio of region/interval size and step size is not ideal, a warning message prints for the user
 if d_warning==True:
-    sys.stderr.write('Warning: The defined \"span\" %s is too large for at least one interval, it could cause an error in the results because of the number of samples. It is recommended to use the smaller step.\n' % d_span)
+    sys.stderr.write('Warning: The defined Span=%s is too large. It could cause an error in the results because of the number of samples. It is recommended to use the smaller step.\n' % d_span)
