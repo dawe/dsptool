@@ -274,7 +274,12 @@ else:
         # Instead of intensity of one point, the average of values relative to the each step used
         d_openvalue = AverageofRegion(d_openvalue, d_step)
         # Combine signals derived from the input file for each step's value by filter with specific windows size
-        d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
+        try:
+            d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
+        except:
+            # In the case of memory problem
+            sys.stderr.write('This step size raise the memory error, please increase the step size.\n')
+            exit()
         # Write the combined values for each interval to the output file
         d_output.addEntries(line, 1, ends= d_open.chroms(line), values=d_convolve, span=d_span, step=d_step)
     d_output.close()
