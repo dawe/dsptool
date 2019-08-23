@@ -1,6 +1,6 @@
 # !/usr/bin/env python3.7
 Target, d_warning, esc, read_window_size ='Entire', False, False, 50
-PACKAGES=['pyBigWig', 'scipy', 'sys', 'argparse', 're', 'os', 'tempfile', 'time', 'numpy', 'pybedtools', 'pathlib', 'scipy', 'UliEngineering','gc','skimage']#, 'numba']
+PACKAGES=['pyBigWig', 'scipy', 'sys', 'argparse', 're', 'os', 'tempfile', 'numpy', 'pybedtools', 'pathlib', 'scipy', 'UliEngineering','gc','skimage']#, 'numba']
 # -----------library import-----------------------------------------------------------------------------
 # Check whether all the required packages are installed or not, one by one
 for i in PACKAGES:
