@@ -1,6 +1,6 @@
 # !/usr/bin/env python3.7
 Target, d_warning, esc, read_window_size ='Entire', False, False, 50
-PACKAGES=['pyBigWig', 'scipy', 'sys', 'argparse', 're', 'os', 'tempfile', 'time', 'numpy', 'pybedtools', 'pathlib', 'scipy', 'UliEngineering','gc']
+PACKAGES=['pyBigWig', 'scipy', 'sys', 'argparse', 're', 'os', 'tempfile', 'time', 'numpy', 'pybedtools', 'pathlib', 'scipy', 'UliEngineering','gc','skimage']#, 'numba']
 # -----------library import-----------------------------------------------------------------------------
 # Check whether all the required packages are installed or not, one by one
 for i in PACKAGES:
@@ -25,6 +25,8 @@ for i in PACKAGES:
                     os.system('conda install pybigwig -c bioconda')
                 elif i == 'pybedtools':
                     os.system('conda install --channel conda-forge --channel bioconda pybedtools')
+                elif i == 'skimage':
+                    os.system('pip3 install opencv-python')
         else:
             print('Please intsall \"',i,'\" package and retry.')
             exit()
@@ -278,7 +280,7 @@ else:
             d_convolve = scipy.signal.fftconvolve(d_openvalue, d_signal, mode="same")
         except:
             # In the case of memory problem
-            sys.stderr.write('This step size raise the memory error, please increase the step size.\n')
+            sys.stderr.write('This step size cause the Memory Error, please increase the step size respect to the available memory.\n')
             exit()
         # Write the combined values for each interval to the output file
         d_output.addEntries(line, 1, ends= d_open.chroms(line), values=d_convolve, span=d_span, step=d_step)
