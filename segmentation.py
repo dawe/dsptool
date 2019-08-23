@@ -1,11 +1,12 @@
-sg_step=sg_span=50
 # !/usr/bin/env python3.7
 import gc
 import numpy as np
 import pyBigWig as bw
 from scipy import ndimage
 from UliEngineering.SignalProcessing.Utils import zero_crossings
-import argparse, sys, time
+import argparse, sys, pybedtools
+from pybedtools import BedTool
+from skimage import data, filters
 gc.enable()
 
 # -----------function Definitions-----------------------------------------------------------------------
@@ -14,44 +15,80 @@ def Sobel_filters(data):
     Ix = ndimage.filters.convolve(data, Kx)
     return(Ix)
 #-----------------------------------------------
-def Maxima(data):
-    x, y, z = [],[],[]
+def Canny(data,M):
+    low = 0.005*M
+    high = 0.1*M
+    hyst = filters.apply_hysteresis_threshold(data, low, high)
+    return(hyst)
+#-----------------------------------------------
+def Maxima(data,value):
+    x, y, b = [],[],{}
     CrossingCoordinates = zero_crossings(data)
+    xp, yp, j = 0, 0, 0
     for i in CrossingCoordinates:
-        if data[i] < data[i+1]:
+        if data[i] < j:
             x.append(i)
-            if data[i] == 0:
-                z.append(i)
+            if abs((value[xp]-value[i])/(value[xp]+1e-9)) < 0.1 and abs((value[yp]-value[i])/(value[yp]+1e-9)) < 0.1 :
+                b[xp] = i
+            else:
+                b[i] = i
+                xp = i
         else:
             y.append(i)
-    return(x, y, z)
+            yp=i
+        j=data[i]
+    return(x, y, b)
 #----------------------------------------------
-def Merge(max,flat):
-    dic={}
-    for i in max:
-        if i in flat:
-            dic[i-1] = i
-        else:
-            dic[i] = i+1
-    return(dic)
+def Boundaries(value, Max, chr, str, end, step):
+    end=int((end-str)/step)
+    dxU=np.gradient(value)
+    dxxU = np.gradient(dxU)
+    s = np.sign(dxxU)
+    signchangeco = np.where(np.diff(np.sign(dxxU)))[0]
+    matrix = [[0]*5]
+    for i in Max:
+        #print('i=',i,'Max[i]',Max[i])
+        sco = [x for x in signchangeco if x < i]
+        sco = (sco[-1] if sco else 0)*step+str
+        eco = [x for x in signchangeco if x > Max[i]]
+        eco = (eco[0] if eco else end)*step+str
+        matrix = np.vstack([matrix, (chr,sco,eco,i,Max[i])])
+    matrix = np.delete(matrix, (0), axis=0)
+    return(matrix)
+#----------------------------------------------
+def Write2BED(matrix,st,str):
+    save=[]
+    for i in matrix:
+        a=i[0]
+        b=int(i[1])
+        c=(i[2])
+        s=("%s\t%s\t%s" % (a,b,c))
+        save.append((s))
+    pybedtools.BedTool(save).saveas('Boundaries(%s).bed' % input)
+    #pybedtools.BedTool(save()).saveas('counted.bed')
 #----------------------------------------------
 def segmentation(chr,str,end,step):
     print(' - Peak finding chromosome',chr,'from',str,'to',end)
     sg_value = sg_input.values(chr, str, end, numpy=True)[::step]
+    Med=(np.median(sg_value))
     ZeroCrossList = Sobel_filters(sg_value)     #using ndimage
-    ListofMaxima, ListofMinima, ListofPlateau = Maxima(ZeroCrossList)
-    print(ListofMaxima)
-    #MergedList = Merge(ListofMaxima,ListofPlateau)
+    Trues = Canny(sg_value,Med)
+    ListofMaxima, ListofMinima, CoMax = Maxima(ZeroCrossList,sg_value)
+    Edges = Boundaries(sg_value, CoMax, chr, str, end, step)
+    Write2BED(Edges,step,str)
     j,k=0,0
     if ListofMaxima:
         for i in ListofMaxima:
-            if sg_step > i-j:
-                pass
+            if Trues[i]:
+                if sg_step > i-j:
+                    pass
+                else:
+                    k = i*step+str
+                    intensity =float(sg_value[i])
+                    j = i
+                    sg_output.addEntries(chr, k, values=[intensity], span=step, step=step)
             else:
-                k = i*step+str
-                intensity =float(sg_value[i])
-                j = i
-                sg_output.addEntries(chr, k, values=[intensity], span=step, step=step)
+                pass
 #----------------------------------------------
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=("""
 ##############################################################################
@@ -72,7 +109,7 @@ input = args.input
 output = args.peak
 sg_region = args.region
 sg_interval = args.interval
-sg_step = int(args.step)
+sg_span = sg_step = int(args.step)
 if args.highresolution:
     sg_step, sg_span = 1, 1
 sg_input = bw.open(input)
@@ -84,6 +121,7 @@ if sg_region:
         # Characters before column-sign should be a chromosome name
         _splited = sg_region.strip().split(':')
         sg_name = _splited[0]
+        chrlist.index(sg_name)
         # The phrase after column-sign consists of two coordinates that separated by a dash-sign
         _splited = _splited[1].strip().split('-')
         sg_start = int(_splited[0])
