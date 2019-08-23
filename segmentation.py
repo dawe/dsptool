@@ -1,10 +1,9 @@
 # !/usr/bin/env python3.7
-import gc
 import numpy as np
 import pyBigWig as bw
 from scipy import ndimage
 from UliEngineering.SignalProcessing.Utils import zero_crossings
-import argparse, sys, pybedtools
+import argparse, sys, pybedtools, gc
 from pybedtools import BedTool
 from skimage import data, filters
 gc.enable()
@@ -28,7 +27,7 @@ def Maxima(data,value):
     for i in CrossingCoordinates:
         if data[i] < j:
             x.append(i)
-            if abs((value[xp]-value[i])/(value[xp]+1e-9)) < 0.1 and abs((value[yp]-value[i])/(value[yp]+1e-9)) < 0.1 :
+            if abs((value[xp]-value[i])/(value[xp]+value[i]+1e-9)) < 0.1 and abs((value[yp]-value[i])/(value[yp]+value[i]+1e-9)) < 0.1 :
                 b[xp] = i
             else:
                 b[i] = i
@@ -39,24 +38,25 @@ def Maxima(data,value):
         j=data[i]
     return(x, y, b)
 #----------------------------------------------
-def Boundaries(value, Max, chr, str, end, step):
-    end=int((end-str)/step)
+def Boundaries(value, Max, chr, start, end, step, Trues):
+    end=int((end-start)/step)
     dxU=np.gradient(value)
     dxxU = np.gradient(dxU)
     s = np.sign(dxxU)
     signchangeco = np.where(np.diff(np.sign(dxxU)))[0]
     matrix = [[0]*5]
     for i in Max:
-        #print('i=',i,'Max[i]',Max[i])
-        sco = [x for x in signchangeco if x < i]
-        sco = (sco[-1] if sco else 0)*step+str
-        eco = [x for x in signchangeco if x > Max[i]]
-        eco = (eco[0] if eco else end)*step+str
-        matrix = np.vstack([matrix, (chr,sco,eco,i,Max[i])])
+        if Trues[i]:
+            #print('i=',i,'Max[i]',Max[i])
+            sco = [x for x in signchangeco if x < i]
+            sco = (sco[-1] if sco else 0)*step+start
+            eco = [x for x in signchangeco if x > Max[i]]
+            eco = (eco[0] if eco else end)*step+start
+            matrix = np.vstack([matrix, (chr,sco,eco,i,Max[i])])
     matrix = np.delete(matrix, (0), axis=0)
     return(matrix)
 #----------------------------------------------
-def Write2BED(matrix,st,str):
+def Write2BED(matrix,st,start):
     save=[]
     for i in matrix:
         a=i[0]
@@ -64,18 +64,18 @@ def Write2BED(matrix,st,str):
         c=(i[2])
         s=("%s\t%s\t%s" % (a,b,c))
         save.append((s))
-    pybedtools.BedTool(save).saveas('Boundaries(%s).bed' % input)
+    pybedtools.BedTool(save).saveas('Boundaries(%s).bed' % s_input)
     #pybedtools.BedTool(save()).saveas('counted.bed')
 #----------------------------------------------
-def segmentation(chr,str,end,step):
-    print(' - Peak finding chromosome',chr,'from',str,'to',end)
-    sg_value = sg_input.values(chr, str, end, numpy=True)[::step]
+def segmentation(chr,start,end,step):
+    print(' - Peak finding chromosome',chr,'from',start,'to',end)
+    sg_value = sg_input.values(chr, start, end, numpy=True)[::step]
     Med=(np.median(sg_value))
     ZeroCrossList = Sobel_filters(sg_value)     #using ndimage
     Trues = Canny(sg_value,Med)
     ListofMaxima, ListofMinima, CoMax = Maxima(ZeroCrossList,sg_value)
-    Edges = Boundaries(sg_value, CoMax, chr, str, end, step)
-    Write2BED(Edges,step,str)
+    Edges = Boundaries(sg_value, CoMax, chr, start, end, step, Trues)
+    Write2BED(Edges,step,start)
     j,k=0,0
     if ListofMaxima:
         for i in ListofMaxima:
@@ -83,7 +83,7 @@ def segmentation(chr,str,end,step):
                 if sg_step > i-j:
                     pass
                 else:
-                    k = i*step+str
+                    k = i*step+start
                     intensity =float(sg_value[i])
                     j = i
                     sg_output.addEntries(chr, k, values=[intensity], span=step, step=step)
@@ -105,15 +105,15 @@ parser.add_argument("-l", "--interval", help="A list of regions could be defined
 parser.add_argument("-H", "--highresolution", action='store_true', help="Force the program to define step and span equal to 1 to have the highest resolution as possible (One base resolution)")
 
 args = parser.parse_args()
-input = args.input
-output = args.peak
+s_input = args.input
+s_output = args.peak
 sg_region = args.region
 sg_interval = args.interval
 sg_span = sg_step = int(args.step)
 if args.highresolution:
     sg_step, sg_span = 1, 1
-sg_input = bw.open(input)
-sg_output = bw.open(output, "w")
+sg_input = bw.open(s_input)
+sg_output = bw.open(s_output, "w")
 sg_output.addHeader(list(sg_input.chroms().items()))
 chrlist=list(sg_input.chroms())
 if sg_region:
@@ -131,7 +131,14 @@ if sg_region:
         exit()
     if (int(sg_input.chroms(sg_name)) < sg_end) :
         sys.stderr.write('Interval definition is incorrect (Larger than the length of the chromosome).\n')
-        exit()
+        question = input('Do you want to continue? (Y/N)').lower()
+        if question == 'y':
+            sg_end = int(sg_input.chroms(sg_name))
+        else:
+            print('Please correct the end coordinate and try again.')
+            exit()
+
+
     segmentation(sg_name, sg_start, sg_end, sg_step)
 elif sg_interval:
     import  tempfile, pybedtools, pathlib
