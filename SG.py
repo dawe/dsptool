@@ -64,7 +64,7 @@ def Write2BED(matrix,st,start):
         c=(i[2])
         s=("%s\t%s\t%s" % (a,b,c))
         save.append((s))
-    pybedtools.BedTool(save).saveas('Boundaries(%s).bed' % input)
+    pybedtools.BedTool(save).saveas('Boundaries(%s).bed' % s_input)
     #pybedtools.BedTool(save()).saveas('counted.bed')
 #----------------------------------------------
 def segmentation(chr,start,end,step):
@@ -106,15 +106,15 @@ parser.add_argument("-l", "--interval", help="A list of regions could be defined
 parser.add_argument("-H", "--highresolution", action='store_true', help="Force the program to define step and span equal to 1 to have the highest resolution as possible (One base resolution)")
 
 args = parser.parse_args()
-input = args.output
-output = args.peak
+s_input = args.output
+s_output = args.peak
 sg_region = args.region
 sg_interval = args.interval
 sg_span = sg_step = int(args.step)
 if args.highresolution:
     sg_step, sg_span = 1, 1
-sg_input = bw.open(input)
-sg_output = bw.open(output, "w")
+sg_input = bw.open(s_input)
+sg_output = bw.open(s_output, "w")
 sg_output.addHeader(list(sg_input.chroms().items()))
 chrlist=list(sg_input.chroms())
 if sg_region:
