@@ -26,7 +26,7 @@ for i in PACKAGES:
                 elif i == 'pybedtools':
                     os.system('conda install --channel conda-forge --channel bioconda pybedtools')
                 elif i == 'skimage':
-                    os.system('pip3 install opencv-python')
+                    os.system('pip3 install scikit-image')
         else:
             print('Please intsall \"',i,'\" package and retry.')
             exit()
