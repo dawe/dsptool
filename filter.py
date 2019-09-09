@@ -1,5 +1,5 @@
 # !/usr/bin/env python3.7
-Target, d_warning, esc, read_window_size ='Entire', False, False, 50
+Target, d_warning, esc ='Entire', False, False
 PACKAGES=['pyBigWig', 'scipy', 'sys', 'argparse', 're', 'os', 'tempfile', 'numpy', 'pybedtools', 'pathlib', 'scipy', 'UliEngineering','gc','skimage']#, 'numba']
 # -----------library import-----------------------------------------------------------------------------
 # Check whether all the required packages are installed or not, one by one
@@ -135,6 +135,7 @@ else:
 
 # --------------size of window correction-------------
 # Window size of the signal resized regaurd the input file
+read_window_size = d_step
 d_size = d_size >> int(numpy.log2(read_window_size))
 
 # --------------filterchecker------------------------
@@ -269,7 +270,7 @@ else:
     # For each chromosome of the entire input data, the value reads and stored in a varible
     for line in chrlist:
         # This process may takes time, so one message informs the process stage
-        sys.stdout.write("- Denoising chromosome "+line+" from begining to "+str(d_open.chroms(line))+"\n")
+        sys.stdout.write("  - Denoising chromosome "+line+" from begining to "+str(d_open.chroms(line))+"\n")
         # Update the standard output
         sys.stdout.flush()
         d_openvalue = d_open.values(line, 1, d_open.chroms(line), numpy=True)
