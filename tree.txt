@@ -1,0 +1,16 @@
+.
+├── DSPtool
+│   ├── chr1.bed
+│   ├── config.ini
+│   ├── dsp-tool.py
+│   ├── filter.py
+│   ├── heatmap.py
+│   ├── HeLa_K9_a.bw
+│   ├── HeLa_K9_b.bw
+│   ├── K562_K9_a.bw
+│   ├── K562_K9_b.bw
+│   ├── segmentation.py
+│   └── SG.py
+└── tree.txt
+
+1 directories, 12 files
