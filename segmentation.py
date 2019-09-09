@@ -7,7 +7,8 @@ import argparse, sys, pybedtools, gc
 from pybedtools import BedTool
 from skimage import data, filters
 gc.enable()
-
+global save
+save=[]
 # -----------function Definitions-----------------------------------------------------------------------
 def Sobel_filters(data):
     Kx = np.array([-1, 0, 1], np.float32)
@@ -57,14 +58,14 @@ def Boundaries(value, Max, chr, start, end, step, Trues):
     return(matrix)
 #----------------------------------------------
 def Write2BED(matrix,st,start):
-    save=[]
+
     for i in matrix:
         a=i[0]
         b=int(i[1])
         c=(i[2])
         s=("%s\t%s\t%s" % (a,b,c))
         save.append((s))
-    pybedtools.BedTool(save).saveas('Boundaries(%s).bed' % s_input)
+    pybedtools.BedTool(save).saveas(s_boundary)
     #pybedtools.BedTool(save()).saveas('counted.bed')
 #----------------------------------------------
 def segmentation(chr,start,end,step):
@@ -98,6 +99,7 @@ This module could find the peaks from the denoised BigWig files. You could defin
 """))
 parser.add_argument("-i", "--input", help="Input file for the denoising module.", required=True)
 parser.add_argument("-p", "--peak", help="Define the name and the location of the output BigWig file. If no output file defined, the result will be stored in Peak.bw file in the running folder.", default="Peaks.bw")
+parser.add_argument("-b", "--boundary", help="Define the name and the location of the output BigWig file. If no output file defined, the result will be stored in Peak.bw file in the running folder.", default="boundary.bed")
 parser.add_argument("-S", "--step", type=int, help="The step size that denoising process applied by, the default step size is 50bps.", default=50)
 parser.add_argument("-r", "--region", help="A single section of input file could be defined as chromosomename:startindex:endindex")
 parser.add_argument("-seg", "--segmentation", action='store_true', help="Run segmentation")
@@ -107,6 +109,7 @@ parser.add_argument("-H", "--highresolution", action='store_true', help="Force t
 args = parser.parse_args()
 s_input = args.input
 s_output = args.peak
+s_boundary = args.boundary
 sg_region = args.region
 sg_interval = args.interval
 sg_span = sg_step = int(args.step)
@@ -172,6 +175,5 @@ else:
     for line in chrlist:
         sg_end=sg_input.chroms(line)
         segmentation(line, sg_start, sg_end, sg_step)
-
 sg_input.close()
 sg_output.close()
