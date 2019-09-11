@@ -69,7 +69,7 @@ def Write2BED(matrix,st,start):
     #pybedtools.BedTool(save()).saveas('counted.bed')
 #----------------------------------------------
 def segmentation(chr,start,end,step):
-    print(' - Peak finding chromosome',chr,'from',start,'to',end)
+    print('  - Peak finding chromosome',chr,'from',start,'to',end)
     sg_value = sg_input.values(chr, start, end, numpy=True)[::step]
     Med=(np.median(sg_value))
     ZeroCrossList = Sobel_filters(sg_value)     #using ndimage
