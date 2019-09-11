@@ -1,18 +1,21 @@
 import sys, time, os, pathlib, re
 s_time = time.time()
+my_data = {}
 # In the config file, some of the variables are T/F
 def str2bool(v):
   return v.lower() in ("True", "true", "t", "T")
-file = open("config.ini","r")
-my_data = {}
-for line in file:
-    if not line.startswith('#')and line.strip():
-        c_splited = line.strip().split(' ')
-        if c_splited[2] == 'True' or  c_splited[2] == 'False':
-            my_data[c_splited[0]] = str2bool(c_splited[2])
-        else:
-            my_data[c_splited[0]] = c_splited[2:]
-file.close()
+try:
+    file = open("config.ini","r")
+    for line in file:
+        if not line.startswith('#')and line.strip():
+            c_splited = line.strip().split(' ')
+            if c_splited[2] == 'True' or  c_splited[2] == 'False':
+                my_data[c_splited[0]] = str2bool(c_splited[2])
+            else:
+                my_data[c_splited[0]] = c_splited[2:]
+    file.close()
+except:
+    my_data['Config.ini']=False
 if my_data['Config.ini']:
     filter=my_data['filter']
     span=my_data['span']
@@ -48,7 +51,7 @@ if my_data['Config.ini']:
     if Segmen:
         if Entire == True:
             for n in range (len(Individuals)):
-                #print('Peak finding ', Individuals[n])
+                print(' - Peak finding ', Individuals[n])
                 run='python segmentation.py -i '+str(Denoised[n])+' -p '+str(Peaks[n])+' -b '+Boundaries[n]+' -S '+step[0]
                 os.system(run)
         elif Intervals != False:
@@ -88,4 +91,4 @@ if fl.args.segmentation:
     os.system(segmentation)
 else:
     pass
-print('Completed in',"%.2f seconds" % (time.time()-s_time))
+print(' Completed in',"%.2f seconds" % (time.time()-s_time))
