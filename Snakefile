@@ -65,16 +65,6 @@ rule GMM:
         rm {wildcards.DIR}/temp/Lizard.bed
         """
 
-rule GMM2:
-    input:
-        A="{DIR}/temp/mnemonics.bed",
-        B="{DIR}/temp/GMM.bed"
-    output:
-        C="{DIR}/temp/over-mnem-gmm.bed"
-    shell:
-        """
-        bedtools intersect -wao -a {input.A} -b {input.B} | bedtools groupby -o sum -c 8 > {output.C}
-        """
 
 rule intDSP:
     input:
@@ -91,29 +81,51 @@ rule intDSP:
         rm {wildcards.DIR}/Lizard.bed
         """
 
-rule intDSP2:
-    input:
-        A="{DIR}/mnemonics.bed",
-        B="{DIR}/Segmented.bed"
-    output:
-        C="{DIR}/over-mnem-dsp.bed",
-    shell:
-        """
-        bedtools intersect -wao -a {input.A} -b {input.B} | bedtools groupby -o sum -c 10 > {output.C}
-        """
-
-rule Shuffle:
+rule DShuffle:
     input:
         A="{DIR}/Segmented.bed",
         B="{DIR}/mnemonics.bed"
     output:
-        C="{DIR}/over-random-mnem.bed",
-        D="{DIR}/over-mnem-random.bed"
+        "{DIR}/over-d-random-mnem.bed",
     shell:
         """
-        bedtools shuffle -i {input.A} -g hg19.genome -noOverlapping | bedtools sort > {wildcards.DIR}/Shuffled.bed
-        bedtools intersect -wao -a {wildcards.DIR}/Shuffled.bed -b {input.B} | bedtools groupby -o sum -c 10 > {output.C}
-        bedtools intersect -wao -a  {input.B} -b {wildcards.DIR}/Shuffled.bed | bedtools groupby -o sum -c 10 > {output.D}
+        bedtools shuffle -i {input.A} -g hg19.genome -noOverlapping | bedtools sort > {wildcards.DIR}/DShuffled.bed
+        bedtools intersect -wao -a {wildcards.DIR}/DShuffled.bed -b {input.B} | bedtools groupby -o sum -c 10 > {output}
+        """
+
+rule SShuffle:
+    input:
+        A="{DIR}/sicer.bed",
+        B="{DIR}/mnemonics.bed"
+    output:
+        "{DIR}/over-s-random-mnem.bed",
+    shell:
+        """
+        bedtools shuffle -i {input.A} -g hg19.genome -noOverlapping | bedtools sort > {wildcards.DIR}/SShuffled.bed
+        bedtools intersect -wao -a {wildcards.DIR}/SShuffled.bed -b {input.B} | bedtools groupby -o sum -c 8 > {output}
+        """
+
+rule GShuffle:
+    input:
+        A="{DIR}/GMM.bed",
+        B="{DIR}/mnemonics.bed"
+    output:
+        "{DIR}/over-g-random-mnem.bed",
+    shell:
+        """
+        bedtools shuffle -i {input.A} -g hg19.genome -noOverlapping | bedtools sort > {wildcards.DIR}/GShuffled.bed
+        bedtools intersect -wao -a {wildcards.DIR}/GShuffled.bed -b {input.B} | bedtools groupby -o sum -c 8 > {output}
+        """
+
+rule MShuffle:
+    input:
+        "{DIR}/mnemonics.bed"
+    output:
+        "{DIR}/over-m-random-mnem.bed"
+    shell:
+        """
+        bedtools shuffle -i {input} -g hg19.genome -noOverlapping | bedtools sort > {wildcards.DIR}/MShuffled.bed
+        bedtools intersect -wao -a {wildcards.DIR}/MShuffled.bed -b {input} | bedtools groupby -o sum -c 9 > {output}
         """
 
 rule Sicer:
@@ -141,95 +153,59 @@ rule intSicer:
         rm {wildcards.DIR}/x.bed
         """
 
-rule intSicer2:
-    input:
-        A="{DIR}/sicer.bed",
-        B="{DIR}/mnemonics.bed"
-    output:
-        "{DIR}/over-mnem-sicer.bed"
-    shell:
-        """
-        bedtools merge -i {input.A} > {wildcards.DIR}/x.bed
-        bedtools intersect -wao -a {input.B} -b {wildcards.DIR}/x.bed | bedtools groupby -o sum -c 8 > {output}
-        rm {wildcards.DIR}/x.bed
-        """
-
 # plot
 
 rule overHMM:
     input:
         A="{DIR}/over-sicer-mnem.bed",
-        B="{DIR}/over-random-mnem.bed",
-        C="{DIR}/over-dsp-mnem.bed",
-        D="{DIR}/over-gmm-mnem.bed"
+        B="{DIR}/over-m-random-mnem.bed",
+        C="{DIR}/over-s-random-mnem.bed",
+        D="{DIR}/over-g-random-mnem.bed",
+        E="{DIR}/over-d-random-mnem.bed",
+        F="{DIR}/over-dsp-mnem.bed",
+        G="{DIR}/over-gmm-mnem.bed"
     output:
         Z="{DIR}/osm.txt",
-        Y="{DIR}/orm.txt",
-        X="{DIR}/odm.txt",
-        W="{DIR}/ogm.txt"
+        Y="{DIR}/omrm.txt",
+        X="{DIR}/osrm.txt",
+        W="{DIR}/ogrm.txt",
+        V="{DIR}/odrm.txt",
+        U="{DIR}/odm.txt",
+        T="{DIR}/ogm.txt"
     shell:
         """
         awk "{{ print \$4/(\$3 - \$2) }}" {input.A} > {output.Z}
         awk "{{ print \$4/(\$3 - \$2) }}" {input.B} > {output.Y}
         awk "{{ print \$4/(\$3 - \$2) }}" {input.C} > {output.X}
         awk "{{ print \$4/(\$3 - \$2) }}" {input.D} > {output.W}
+        awk "{{ print \$4/(\$3 - \$2) }}" {input.E} > {output.V}
+        awk "{{ print \$4/(\$3 - \$2) }}" {input.F} > {output.U}
+        awk "{{ print \$4/(\$3 - \$2) }}" {input.G} > {output.T}
         """
 
-rule HMMover:
-    input:
-        A="{DIR}/over-mnem-sicer.bed",
-        B="{DIR}/over-mnem-random.bed",
-        C="{DIR}/over-mnem-dsp.bed",
-        D="{DIR}/over-mnem-gmm.bed"
-    output:
-        Z="{DIR}/oms.txt",
-        Y="{DIR}/omr.txt",
-        X="{DIR}/omd.txt",
-        W="{DIR}/omg.txt"
-    shell:
-        """
-        awk "{{ print \$4/(\$3 - \$2) }}" {input.A} > {output.Z}
-        awk "{{ print \$4/(\$3 - \$2) }}" {input.B} > {output.Y}
-        awk "{{ print \$4/(\$3 - \$2) }}" {input.C} > {output.X}
-        awk "{{ print \$4/(\$3 - \$2) }}" {input.D} > {output.W}
-        """
-
-rule plotOMX:
-    input:
-        S="{X}/oms.txt",
-        R="{X}/omr.txt",
-        G="{X}/omg.txt",
-        D="{X}/omd.txt"
-    output:
-        '{X}/plt/omx.png'
-    run:
-        AXTITLE='\#,basepair,\(last,col\),\/,length,of,consider,region,\(col3-col2\),in,intersect,bed,files'
-        TITLE="intersect,-wao,-a,Segmented.bed,-b,mnemonics.bed"
-        COLNAME='Sicer,Shuffle,GMM,DSP'
-        shell("""
-        python boxplot.py {input.S} {input.R} {input.G} {input.D} {output} {TITLE} {AXTITLE} {COLNAME}
-        """)
 
 rule plotOXM:
     input:
         S="{X}/osm.txt",
-        R="{X}/orm.txt",
+        R="{X}/omrm.txt",
         G="{X}/ogm.txt",
-        D="{X}/odm.txt"
+        D="{X}/odm.txt",
+        RS="{X}/osrm.txt",
+        RG="{X}/ogrm.txt",
+        RD="{X}/odrm.txt"
     output:
         '{X}/plt/oxm.png'
     run:
         AXTITLE='\#,basepair,\(last,col\),\/,length,of,consider,region,\(col3-col2\),in,intersect,bed,files'
-        TITLE="intersect,-wao,-a,mnemonics.bed,-b,Segmented.bed"
-        COLNAME='Sicer,Shuffle,GMM,DSP'
+        TITLE="intersect,-wao,-a,Segmented.bed,-b,mnemonics.bed"
+        COLNAME='Sicer,ShMnem,GMM,DSP,ShSicer,ShGMM,ShDSP'
         shell("""
-        python boxplot.py {input.S} {input.R} {input.G} {input.D} {output} {TITLE} {AXTITLE} {COLNAME}
+        python boxplot.py {input.S} {input.R} {input.G} {input.D} {input.RS} {input.RG} {input.RD} {output} {TITLE} {AXTITLE} {COLNAME}
         """)
 
 rule runall2:
     input:
-        '{X}/plt/oxm.png',
-        '{X}/plt/omx.png'
+        '{X}/plt/oxm.png'
     output:
         "{X}/OK"
     shell:
