@@ -247,7 +247,7 @@ for line in INPint:
         else:
             final = None
         RZ = EX.ranges(indices_nonzeros, userdefined_windowsize, initial, final)   # array of relative cooridnates
-        print(RZ)
+        #print(RZ)
         zeros = [(line[0], str(i[0]+int(line[1])), str(i[1]+int(line[1]))) for i in RZ]
     # If no signal found in the region of interest, entrie of that will be reported as zero region
     else:
