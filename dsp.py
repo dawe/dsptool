@@ -9,7 +9,7 @@ __date__ = '12 Jan 2020'
 import time, sys, os
 dsp_time = time.time()
 sys.stdout.write('\r Please wait ...')
-# os.system('clear')
+os.system('clear')
 
 
 # def parseArgs(*args, **kwargs):
@@ -37,10 +37,8 @@ try:
     import numpy as np
     import sklearn.mixture
     import matplotlib.pyplot as plt
-    import package.excluder as EX
-    import package.segment as SG
-    # from package import excluder as EX
-    # from package import segment as SG
+    from package import excluder as EX
+    from package import segment as SG
 except ImportError:
     raise ImportError("""\n#\n# Excluder error: The following packages are required, please install them.:
 
@@ -146,7 +144,7 @@ primewindowsize = 2 << (int(np.log2(userdefined_windowsize))+foldtimes-1)
 Exwindowsize = 2 << (int(np.log2(userdefined_windowsize))+foldtimes)
 # Window size of prime signal
 PWS = primewindowsize >> int(np.log2(Step_size))
-ExWS = Exwindowsize >> int(np.log2(Step_size))
+# ExWS = Exwindowsize >> int(np.log2(Step_size))                <<<<<< For add extremely low resolution
 # Window size of the signal resized regaurd the input file
 WSize = userdefined_windowsize >> int(np.log2(Step_size))
 # Location of the input file stores on "my_file" variable
@@ -237,17 +235,19 @@ for line in INPint:
     indices_nonzeros = np.nonzero(openvalue != 0)[0]
     # Find stretches of zero by at least window_size length
     if len(indices_nonzeros) > 0:   # If any nonzero region identified, all the zeros around it will be stored in an array
+
         if indices_nonzeros[0] != 0:    # If the region of interest started by 0 values, it will be reported in the zero regions
-            initial = True
+            initial = [0,indices_nonzeros[0]-1]
         else:
             initial = False
 
         if indices_nonzeros[-1] != len(openvalue)-1:   # If the region of interest ends by 0 values, it will be reported in the zero regions
             # zeros = np.insert(zeros, len(zeros), [int(indices_nonzeros[-1]),int(len(Mat))], axis=0)           <<<<<<<<<< Remove
-            final = len(openvalue)
+            final = [indices_nonzeros[-1]+1, len(openvalue)]
         else:
             final = None
         RZ = EX.ranges(indices_nonzeros, userdefined_windowsize, initial, final)   # array of relative cooridnates
+        print(RZ)
         zeros = [(line[0], str(i[0]+int(line[1])), str(i[1]+int(line[1]))) for i in RZ]
     # If no signal found in the region of interest, entrie of that will be reported as zero region
     else:
@@ -260,12 +260,13 @@ if BL != []:
     BLRemoved = INint.subtract(BL)
 else:
     BLRemoved = INint
+
 INTERVAL = BLRemoved.subtract(Zint)                    # List of coordinates to be processed
 if SaveInterval_file:
     pybedtools.BedTool(INTERVAL).saveas(SaveInterval_file)
     print('Interval exported : ',SaveInterval_file)
 
-sys.stdout.write('\r Exclusion completed.\n')
+sys.stdout.write('\r Exclusion completed.           \n')
 
 # -----------End of excluder / blacklist----------------
 
@@ -276,7 +277,7 @@ sys.stdout.write('\r Exclusion completed.\n')
 try:
     ScipySignal=eval('scipy.signal.%s(%s)' % (d_filter,WSize)) # Cross the scaling factor
     low_resolution_Signal=eval('scipy.signal.%s(%s)' % (d_filter,PWS))
-    Ex_resolution_Signal=eval('scipy.signal.%s(%s)' % (d_filter,ExWS))
+    # Ex_resolution_Signal=eval('scipy.signal.%s(%s)' % (d_filter,ExWS))
     # Apply different scales on the signal
 except AttributeError:
     sys.stderr.write("\n# Filter error: The filter name "+ d_filter +" for the following command is not valid!\n -  scipy.signal." + d_filter)
@@ -312,8 +313,8 @@ else:
         # Low resolution
         low_resolution_convolve = scipy.signal.fftconvolve(Average_value, low_resolution_Signal, mode="same")
         InLowValue.append(low_resolution_convolve)
-        Ex_resolution_convolve = scipy.signal.fftconvolve(Average_value, Ex_resolution_Signal, mode="same")
-        InExtreamValue.append(Ex_resolution_convolve)
+        # Ex_resolution_convolve = scipy.signal.fftconvolve(Average_value, Ex_resolution_Signal, mode="same")
+        # InExtreamValue.append(Ex_resolution_convolve)
         low_resolution_output.addEntries(line.chrom, line.start, values=low_resolution_convolve, span=Span_size, step=Step_size)
     sys.stdout.write('\r Saving bigWig file...')
     OUT_file.close()
@@ -336,17 +337,17 @@ for line in INTERVAL:
     sys.stdout.write('\r '+line.chrom+'       ')
     Sub_region = SG.high_resolution(line.chrom, line.start, line.end, Step_size, InHighValue[counter])
     Region = SG.low_resolution(line.chrom, line.start, line.end, Step_size, InLowValue[counter], TEMPFolder)
-    Extream_region = SG.low_resolution(line.chrom, line.start, line.end, Step_size, InExtreamValue[counter], TEMPFolder)
+    # Extream_region = SG.low_resolution(line.chrom, line.start, line.end, Step_size, InExtreamValue[counter], TEMPFolder)
     if Sub_region is not None:
         Wazowski.extend(Sub_region)
     if Region is not None:
         Salivan.extend(Region)
-    if Extream_region is not None:
-        Henry.extend(Extream_region)
+    # if Extream_region is not None:
+    #     Henry.extend(Extream_region)
     counter=counter+1
 pybedtools.BedTool(list(Wazowski)).saveas(str(TEMPFolder)+'Wazowski.bed')
 pybedtools.BedTool(list(Salivan)).saveas(str(TEMPFolder)+'Salivan.bed')
-pybedtools.BedTool(list(Henry)).saveas(str(TEMPFolder)+'Henry.bed')
+# pybedtools.BedTool(list(Henry)).saveas(str(TEMPFolder)+'Henry.bed')
 
 
 # # find address of source file
