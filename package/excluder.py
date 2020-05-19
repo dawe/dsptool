@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # -----------functions Definition-----------------------------------------------------------------------
-import numpy as np
-import sys, pathlib, pybedtools
+
 # ---------------Ranges--------------
 def ranges(nonzerolist, WSize, init, fin):
-    print('range')
     """Range function identifies the connectivity of the indices of the zero-value points within the input file and return them
     as a paired-coordinate list if they cover more than 2500 base pairs.
 
@@ -16,22 +14,22 @@ def ranges(nonzerolist, WSize, init, fin):
     if the length of these gaps are more than window size (131072) they will be reported as a list with two elements
     start and end positions.
     """
+    import numpy as np
     gaps = [[s, e] for s, e in zip(nonzerolist, nonzerolist[1:]) if s+1 < e]
-    zero= list([[i[0]+1,i[1]+1] for i in gaps if i[1]-i[0]>WSize])
+    zero = list([[i[0]+1,i[1]+1] for i in gaps if i[1]-i[0]>WSize])
     if init and len(zero) > 0:
-        zero = np.insert(zero, 0, [0, gaps[0][0]], axis=0)
+        zero = np.insert(zero, 0, init, axis=0)
     elif init and len(zero) == 0:
-        zero = [[0, (gaps[0][0])-1]]
-
+        zero = [init]
     if fin and len(zero) > 1:
-        zero = np.insert(zero, -1, [gaps[-1][1], fin], axis=0)
+        zero = np.insert(zero, -1, fin, axis=0)
     return (zero)
 
 # --------------size of window correction-------------
 
 # The function increase the accuracy of sampling when Step is higher than 1. Two parameters are used in this fuction, VALUE is a list of intensities that loaded from input file related to the specific regions and STEP is the distance between each sample through out this regions.
 def AverageofRegion(VALUE, Step_size):
-    print('AverageofRegion')
+    import numpy as np
     if Step_size==1:
         return(VALUE)
     else:                                                                                       ####
@@ -54,7 +52,6 @@ def AverageofRegion(VALUE, Step_size):
 # ---------------Interval coverter--------------
 
 def intervalconverter(BL, target, HEADER, Step_size, Region):
-    print('intervalconverter')
     """ The interval converter function converts the region of interest or defined interval to an input.bed
     file, store within the temp folder.
 
@@ -69,7 +66,7 @@ def intervalconverter(BL, target, HEADER, Step_size, Region):
     For the entire genome, all the chromosome names present in the header of the BigWig file with relative
     chromosome size stores in the temporary file "input.bed".
     """
-
+    import sys, pybedtools
     save = []
     # If switch "r" or "Region" defined by the user, the inserted value must follow the standard pattern that contains chromosome name, start and end coordinates
     if target=='Region' :
@@ -98,6 +95,7 @@ def intervalconverter(BL, target, HEADER, Step_size, Region):
         INPUT = pybedtools.BedTool([(chrname, start, end)])
 
     elif target=='Interval':
+        import pathlib, pybedtools
         bed_file = pathlib.Path(Region)
         if bed_file.is_file():
             try:
