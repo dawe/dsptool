@@ -247,7 +247,7 @@ for line in INPint:
         else:
             final = None
         RZ = EX.ranges(indices_nonzeros, userdefined_windowsize, initial, final)   # array of relative cooridnates
-        #print(RZ)
+        # print(RZ)
         zeros = [(line[0], str(i[0]+int(line[1])), str(i[1]+int(line[1]))) for i in RZ]
     # If no signal found in the region of interest, entrie of that will be reported as zero region
     else:
@@ -345,8 +345,9 @@ for line in INTERVAL:
     # if Extream_region is not None:
     #     Henry.extend(Extream_region)
     counter=counter+1
-pybedtools.BedTool(list(Wazowski)).saveas(str(TEMPFolder)+'Wazowski.bed')
-pybedtools.BedTool(list(Salivan)).saveas(str(TEMPFolder)+'Salivan.bed')
+bedloc=str(TEMPFolder)+(denoised_data.split("/")[-1])[:-3:]
+pybedtools.BedTool(list(Wazowski)).saveas(bedloc+'_highresolution.bed')
+pybedtools.BedTool(list(Salivan)).saveas(bedloc+'_lowresolution.bed')
 # pybedtools.BedTool(list(Henry)).saveas(str(TEMPFolder)+'Henry.bed')
 
 
