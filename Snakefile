@@ -1,6 +1,5 @@
 #Run by:
-# $ snakemake -s /pathtosnakefile/Snakefile justdoit --cores 12 --config path=/pathtoinputfoldercontaining"tagAlign"files
-
+# $ snakemake -s /pathtosnakefile/Snakefile justdoit --cores 12 --config path=/pathtoinputfolderwithsubfolders
 
 import glob
 
@@ -16,31 +15,30 @@ def find_tagAlign(path_of_tagAligns):
     return NAME,PDIR
 
 NAME, PDIR = find_tagAlign(config['path'])
-print ("NAME IS:",NAME)
-print ("PDIR IS:",PDIR)
+# print ("NAME IS:",NAME)
+# print ("PDIR IS:",PDIR)
 
-rule x1:
+rule r1:
     input: "{pdir}/{name}.tagAlign"
     output: "{pdir}/{name}.bam"
-    # shell: "touch {output[0]}"
-    shell:
-        """
-        bedToBam -i {input[0]} -g hg19.chrom.sizes | samtools sort -o {output[0]}
-        samtools index {output[0]}
-        """
-rule x2:
+    shell: "bedToBam -i {input[0]} -g hg19.chrom.sizes | samtools sort -o {output[0]}"
+
+rule r2:
     input: "{pdir}/{name}.bam"
+    output: "{pdir}/{name}.bam.bai"
+    shell: "samtools index {input[0]}"
+
+rule r3:
+    input: "{pdir}/{name}.bam", "{pdir}/{name}.bam.bai"
     output: "{pdir}/{name}.bw"
     shell: "bamCoverage -b {input[0]} -o {output[0]} --extend 300 "
 
-rule x4:
+rule r4:
     input: "{pdir}/{name}.bw"
     output: "{pdir}/{name}_denoised.bw", "{pdir}/temp/{name}_denoised_highresolution.bed", "{pdir}/temp/{name}_denoised_lowresolution.bed"
-    shell:
-        """
-        python dsp.py -i {input[0]} -d {output[0]} -temp {wildcards.pdir}/temp
-        """
-rule x5:
+    shell: "python dsp.py -i {input[0]} -d {output[0]} -temp {wildcards.pdir}/temp"
+
+rule r5:
     input: "{pdir}/temp/{name}_denoised_highresolution.bed" , "{pdir}/temp/{name}_denoised_lowresolution.bed"
     output: "{pdir}/{name}_segmented.bed", "{pdir}/temp/{name}_temp.bed"
     shell:
