@@ -314,7 +314,7 @@ else:
     target='Entrie_genome'
     zone=''
 # The "excluder" module converts the region of inspection to a list of intervals.
-INPint = EX.intervalconverter(BL, target, ChrLIST, Step_size, zone) # list of intervals
+INPint = EX.intervalconverter(target, ChrLIST, Step_size, zone)
 # Convert the interval list to the Bedtool format. Thus Bedtool could be applied to it.
 INint = BedTool(INPint)
 
