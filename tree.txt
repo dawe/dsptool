@@ -1,7 +1,0 @@
-.
-├── package
-│   ├── filter.py
-│   └-─ segmentation.py
-└── script.py
-
-1 directories, 3 files
