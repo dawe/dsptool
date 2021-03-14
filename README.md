@@ -1,11 +1,13 @@
-# dsptool
+# DSPtool
 
 # Table of Contents
 
 # Usage
 
 #### Required Extensions:
-> pyBigWig, scipy.signal, sys, argparse, re, os, pathlib, numpy, pybedtools
+> There is a list of required packages to run the DSPtool, 
+> It is suggested that use a virtual environment to prevent any possible conflict between packages. It is possible to download the packages separately or use the "dsptool.yml" file with the following command.  
+> conda env create -f dsptool.yml --name dsptool
 
 #### Example Files
 BigWig file   [ENCFF409PGL.bw](https://drive.google.com/open?id=1JYTv_Zj-M6xtNzed5Mk3saG6LMbDUu70)
