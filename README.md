@@ -6,7 +6,7 @@
 
 #### Required Extensions:
  There is a list of required packages to run the DSPtool, 
- It is suggested that use a virtual environment to prevent any possible conflict between packages. It is possible to download the packages separately or use the "dsptool.yml" file with the following command.  
+ It is suggested that use a virtual environment to prevent any possible conflict between packages. It is possible to download the packages separately or use the following command and "dsptool.yml" file to create a new environment with all the external packages.  
 > conda env create -f dsptool.yml --name dsptool
 
 #### Example Files
