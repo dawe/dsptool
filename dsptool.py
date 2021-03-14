@@ -18,7 +18,7 @@ RESET = "\033[0;0m"
 # -----------modules check------------------------------------------------------
 # Check the availability of all the packages required for running the program
 try:
-    import pyBigWig, sys, argparse, os, pathlib
+    import pyBigWig, sys, argparse, os, pathlib, skimage
     from pybedtools import BedTool
     import scipy.signal
     from pathlib import Path
@@ -45,6 +45,7 @@ except ImportError:
 |\033[0;0m sklearn                    \033[1;36m|\033[0;0m        0.24.0        \033[1;36m|\033[0;0m       py36hed11f80_0    \033[1;36m|
 |\033[0;0m pathlib                    \033[1;36m|\033[0;0m        1.0.1         \033[1;36m|\033[0;0m       py36h9f0ad1d_3    \033[1;36m|
 |\033[0;0m matplotlib                 \033[1;36m|\033[0;0m        3.3.3         \033[1;36m|\033[0;0m       py36h79c6626_0    \033[1;36m|
+|\033[0;0m skimage                    \033[1;36m|\033[0;0m        0.16.2        \033[1;36m|\033[0;0m       py36h4f17bb1_0    \033[1;36m|
 |\033[0;0m argparse                   \033[1;36m|\033[0;0m        1.4.0         \033[1;36m|\033[0;0m       py36_0            \033[1;36m|
 -------------------------------------------------------------------------------\033[0;0m\n
 DSP-tool should have a package folder containing excluder.py, segment.py, gmm.py, OTSU.py, and kmean.py.
