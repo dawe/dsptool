@@ -47,6 +47,7 @@ except ImportError:
 |\033[0;0m matplotlib                 \033[1;36m|\033[0;0m        3.3.3         \033[1;36m|\033[0;0m       py36h79c6626_0    \033[1;36m|
 |\033[0;0m skimage                    \033[1;36m|\033[0;0m        0.16.2        \033[1;36m|\033[0;0m       py36h4f17bb1_0    \033[1;36m|
 |\033[0;0m argparse                   \033[1;36m|\033[0;0m        1.4.0         \033[1;36m|\033[0;0m       py36_0            \033[1;36m|
+|\033[0;0m kneed                      \033[1;36m|\033[0;0m        0.7.0         \033[1;36m|\033[0;0m       pyh9f0ad1d_0      \033[1;36m|
 -------------------------------------------------------------------------------\033[0;0m\n
 DSP-tool should have a package folder containing excluder.py, segment.py, gmm.py, OTSU.py, and kmean.py.
 in order to preventing the package versions conflict, it is suggested to create a conda virtual environment. e.g.
